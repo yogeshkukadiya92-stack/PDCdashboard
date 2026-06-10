@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDC Client Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  </head>
+  <body>
+    <aside class="sidebar" aria-label="Dashboard navigation">
+      <div class="brand">
+        <div class="brand-mark">PDC</div>
+        <div>
+          <h1>Diet Counselling</h1>
+          <p>Client & payment control</p>
+        </div>
+      </div>
+
+      <nav class="nav-links" aria-label="Main sections">
+        <a href="#overview" class="active" data-section-link="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></a>
+        <a href="#clients" data-section-link="clients"><i data-lucide="users"></i><span>Clients</span></a>
+        <a href="#payments" data-section-link="payments"><i data-lucide="wallet-cards"></i><span>Payments</span></a>
+        <a href="#history" data-section-link="history"><i data-lucide="history"></i><span>History</span></a>
+        <a href="#reminders" data-section-link="reminders"><i data-lucide="bell-ring"></i><span>Reminders</span></a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <p>Today</p>
+        <strong id="todayLabel">-</strong>
+      </div>
+    </aside>
+
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Personal Diet Counselling</p>
+          <h2>PDC Operations Dashboard</h2>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" id="notifyButton" title="Enable notifications" aria-label="Enable notifications">
+            <i data-lucide="bell"></i>
+          </button>
+          <button class="ghost-button" id="exportButton">
+            <i data-lucide="download"></i>
+            Export
+          </button>
+          <label class="ghost-button file-button">
+            <i data-lucide="upload"></i>
+            Import
+            <input id="importFile" type="file" accept="application/json" />
+          </label>
+          <button class="primary-button" id="newClientButton">
+            <i data-lucide="user-plus"></i>
+            New Client
+          </button>
+        </div>
+      </header>
+
+      <section class="panel sync-panel" aria-labelledby="syncTitle">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Google Sheet</p>
+            <h3 id="syncTitle">Auto Sync Settings</h3>
+          </div>
+          <span class="badge" id="syncStatus">Not connected</span>
+        </div>
+        <div class="sync-row">
+          <label>
+            Apps Script Web App URL
+            <input id="sheetWebAppUrl" placeholder="https://script.google.com/macros/s/..." />
+          </label>
+          <button class="ghost-button" id="saveSheetUrlButton">
+            <i data-lucide="link"></i>
+            Save URL
+          </button>
+          <button class="primary-button" id="syncAllButton">
+            <i data-lucide="refresh-cw"></i>
+            Sync All
+          </button>
+        </div>
+      </section>
+
+      <section id="overview" class="overview-grid page-section" aria-label="Dashboard summary">
+        <article class="metric accent-teal">
+          <p>Total Clients</p>
+          <strong id="totalClients">0</strong>
+          <span>Active PDC plans</span>
+        </article>
+        <article class="metric accent-blue">
+          <p>This Month Meetings</p>
+          <strong id="monthMeetings">0</strong>
+          <span>Scheduled reviews</span>
+        </article>
+        <article class="metric accent-amber">
+          <p>Pending Payment</p>
+          <strong id="pendingAmount">₹0</strong>
+          <span>Collectable balance</span>
+        </article>
+        <article class="metric accent-rose">
+          <p>Due Soon</p>
+          <strong id="dueSoonCount">0</strong>
+          <span>Next 7 days</span>
+        </article>
+      </section>
+
+      <section id="clientWorkspace" class="workspace-grid">
+        <section class="panel form-panel" aria-labelledby="clientFormTitle">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Entry</p>
+              <h3 id="clientFormTitle">Add / Update Client</h3>
+            </div>
+            <button class="icon-button subtle" id="resetFormButton" title="Clear form" aria-label="Clear form">
+              <i data-lucide="rotate-ccw"></i>
+            </button>
+          </div>
+
+          <form id="clientForm" class="client-form">
+            <input type="hidden" id="clientId" />
+
+            <label>
+              Client Name
+              <input id="clientName" required placeholder="e.g. Riya Sharma" />
+            </label>
+            <label>
+              Mobile Number
+              <input id="phone" required placeholder="e.g. 9876543210" inputmode="tel" />
+            </label>
+
+            <div class="field-row">
+              <label>
+                Plan Months
+                <input id="planMonths" required type="number" min="1" value="3" />
+              </label>
+              <label>
+                Service Amount
+                <input id="serviceAmount" required type="number" min="0" value="0" />
+              </label>
+            </div>
+
+            <div class="field-row">
+              <label>
+                Start Date
+                <input id="startDate" required type="date" />
+              </label>
+              <label>
+                End Date
+                <input id="endDate" required type="date" />
+              </label>
+            </div>
+
+            <div class="field-row">
+              <label>
+                Next PDC Meeting
+                <input id="meetingDate" required type="date" />
+              </label>
+              <label>
+                Payment Mode
+                <select id="paymentMode">
+                  <option value="Online">Online</option>
+                  <option value="Cash">Cash</option>
+                  <option value="UPI">UPI</option>
+                  <option value="Card">Card</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="field-row">
+              <label>
+                Payment Received
+                <input id="receivedAmount" required type="number" min="0" value="0" />
+              </label>
+              <label>
+                Status
+                <select id="status">
+                  <option value="Active">Active</option>
+                  <option value="Interested">Interested</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Paused">Paused</option>
+                </select>
+              </label>
+            </div>
+
+            <label>
+              Follow-up Date
+              <input id="followUpDate" type="date" />
+            </label>
+
+            <label>
+              Notes
+              <textarea id="notes" rows="3" placeholder="Diet focus, special condition, follow-up points"></textarea>
+            </label>
+
+            <button class="primary-button full" type="submit">
+              <i data-lucide="save"></i>
+              Save Client
+            </button>
+            <p class="form-note">Monthly PDC schedule is created automatically from the start date and plan duration.</p>
+          </form>
+        </section>
+
+        <section id="reminders" class="panel reminder-panel" aria-labelledby="reminderTitle">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Action required</p>
+              <h3 id="reminderTitle">Meeting & Follow-up Reminders</h3>
+            </div>
+            <button class="ghost-button small" id="printButton">
+              <i data-lucide="printer"></i>
+              Print
+            </button>
+          </div>
+          <div id="reminderList" class="reminder-list"></div>
+        </section>
+      </section>
+
+      <section id="clients" class="panel data-panel page-section" aria-labelledby="clientsTitle">
+        <div class="panel-heading table-heading">
+          <div>
+            <p class="eyebrow">Database</p>
+            <h3 id="clientsTitle">Client Records</h3>
+          </div>
+          <div class="table-tools">
+            <div class="search-box">
+              <i data-lucide="search"></i>
+              <input id="searchInput" placeholder="Search client, phone, status" />
+            </div>
+            <select id="statusFilter" aria-label="Filter by status">
+              <option value="All">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Interested">Interested</option>
+              <option value="Completed">Completed</option>
+              <option value="Paused">Paused</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Plan</th>
+                <th>Next Meeting</th>
+                <th>Follow Up</th>
+                <th>Service</th>
+                <th>Received</th>
+                <th>Pending</th>
+                <th>Mode</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="clientTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="history" class="panel history-panel page-section" aria-labelledby="historyTitle">
+        <div class="panel-heading table-heading">
+          <div>
+            <p class="eyebrow">Client workflow</p>
+            <h3 id="historyTitle">Meetings, Installments & Renewal</h3>
+          </div>
+          <select id="detailClientSelect" aria-label="Select client for history"></select>
+        </div>
+
+        <div class="detail-summary" id="detailSummary"></div>
+
+        <div class="history-grid">
+          <section class="sub-panel" aria-labelledby="meetingHistoryTitle">
+            <div class="sub-heading">
+              <h4 id="meetingHistoryTitle">Monthly Meeting History</h4>
+              <span class="badge" id="meetingProgress">0/0 done</span>
+            </div>
+            <div id="meetingHistory" class="timeline-list"></div>
+          </section>
+
+          <section class="sub-panel" aria-labelledby="installmentTitle">
+            <div class="sub-heading">
+              <h4 id="installmentTitle">Payment Installments</h4>
+              <span class="badge" id="installmentTotal">₹0</span>
+            </div>
+
+            <form id="paymentForm" class="payment-form">
+              <div class="field-row">
+                <label>
+                  Date
+                  <input id="paymentDate" type="date" required />
+                </label>
+                <label>
+                  Amount
+                  <input id="paymentAmount" type="number" min="1" required placeholder="0" />
+                </label>
+              </div>
+              <div class="field-row">
+                <label>
+                  Mode
+                  <select id="paymentEntryMode">
+                    <option value="Online">Online</option>
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Card">Card</option>
+                  </select>
+                </label>
+                <label>
+                  Note
+                  <input id="paymentNote" placeholder="Receipt / reference" />
+                </label>
+              </div>
+              <button class="primary-button full" type="submit">
+                <i data-lucide="plus"></i>
+                Add Installment
+              </button>
+            </form>
+
+            <div id="paymentHistory" class="timeline-list compact"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="payments" class="panel payment-panel page-section" aria-labelledby="paymentsTitle">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Accounts</p>
+            <h3 id="paymentsTitle">Payment Summary</h3>
+          </div>
+        </div>
+        <div class="payment-grid">
+          <div class="chart-card">
+            <div class="donut" id="paymentDonut" style="--percent: 0">
+              <span id="collectionPercent">0%</span>
+            </div>
+            <div>
+              <p class="muted">Collection progress</p>
+              <strong id="collectionText">₹0 received of ₹0</strong>
+            </div>
+          </div>
+          <div class="ledger" id="ledgerList"></div>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
