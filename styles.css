@@ -20,6 +20,10 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -135,6 +139,20 @@ button svg,
 .app-shell {
   margin-left: var(--sidebar);
   padding: 28px;
+}
+
+.page-section {
+  display: none;
+  animation: fadeIn 0.3s ease;
+}
+
+.page-section.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .topbar,
@@ -309,9 +327,8 @@ button svg,
   --accent: var(--rose);
 }
 
-.workspace-grid {
+.clients-layout {
   display: grid;
-  grid-template-columns: minmax(360px, 0.85fr) minmax(420px, 1.15fr);
   gap: 16px;
   margin-bottom: 16px;
 }
@@ -742,7 +759,7 @@ th {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .workspace-grid,
+  .clients-layout,
   .payment-grid,
   .history-grid,
   .sync-row {

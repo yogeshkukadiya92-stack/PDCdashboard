@@ -101,42 +101,6 @@ const elements = {
   toast: document.querySelector("#toast")
 };
 
-const sectionState = {
-  overview: [document.querySelector("#overview")],
-  clients: [document.querySelector("#clientWorkspace"), document.querySelector("#clients")],
-  payments: [document.querySelector("#payments")],
-  history: [document.querySelector("#history")],
-  reminders: [document.querySelector("#reminders")]
-};
-
-const sectionLinks = [...document.querySelectorAll("[data-section-link]")];
-
-function setActiveSection(sectionId = "overview", { updateHash = true, scroll = true } = {}) {
-  const visibleSections = new Set(sectionState[sectionId] || sectionState.overview);
-
-  Object.entries(sectionState).forEach(([, nodes]) => {
-    nodes.forEach((node) => {
-      if (!node) return;
-      node.hidden = !visibleSections.has(node);
-    });
-  });
-
-  sectionLinks.forEach((link) => {
-    const active = link.dataset.sectionLink === sectionId;
-    link.classList.toggle("active", active);
-    link.setAttribute("aria-current", active ? "page" : "false");
-  });
-
-  if (updateHash) {
-    history.replaceState(null, "", `#${sectionId}`);
-  }
-
-  if (scroll) {
-    const target = sectionId === "clients" ? document.querySelector("#clientWorkspace") : document.querySelector(`#${sectionId}`);
-    target?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-}
-
 function loadClients() {
   const saved = localStorage.getItem(storageKey) || legacyStorageKeys.map((key) => localStorage.getItem(key)).find(Boolean);
   let loadedClients = seedClients;
@@ -179,7 +143,7 @@ function normalizeClient(client) {
 }
 
 function normalizePayments(client) {
-  if (Array.isArray(client.payments) && client.payments.length) {
+  if (Array.isArray(client.payments)) {
     return client.payments.map((payment) => ({
       id: payment.id || crypto.randomUUID(),
       date: payment.date || client.startDate,
@@ -660,12 +624,27 @@ function handleSubmit(event) {
   let savedClient;
   if (existingIndex >= 0) {
     const existing = clients[existingIndex];
-    const keepPayments = receivedFor(existing) === baseClient.receivedAmount;
+    const diff = baseClient.receivedAmount - receivedFor(existing);
+    let updatedPayments = existing.payments;
+
+    if (diff !== 0) {
+      updatedPayments = [
+        ...(existing.payments || []),
+        {
+          id: crypto.randomUUID(),
+          date: toDateValue(new Date()),
+          amount: diff,
+          mode: baseClient.paymentMode,
+          note: diff > 0 ? "Adjustment (Added)" : "Adjustment (Reduced)"
+        }
+      ];
+    }
+
     const client = normalizeClient({
       ...existing,
       ...baseClient,
       createdAt: existing.createdAt,
-      payments: keepPayments ? existing.payments : undefined
+      payments: updatedPayments
     });
     clients[existingIndex] = client;
     savedClient = client;
@@ -701,6 +680,7 @@ function editClient(id) {
   elements.followUpDate.value = client.followUpDate || "";
   elements.status.value = client.status;
   elements.notes.value = client.notes || "";
+  switchView("view-clients");
   document.querySelector(".form-panel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -854,6 +834,7 @@ function sendFollowUp(id) {
 function selectProfile(id) {
   selectedClientId = id;
   renderDetails();
+  switchView("view-history");
   document.querySelector("#history").scrollIntoView({ behavior: "smooth", block: "start" });
   if (window.lucide) lucide.createIcons();
 }
@@ -1021,10 +1002,30 @@ function showToast(message) {
   showToast.timeout = window.setTimeout(() => elements.toast.classList.remove("show"), 2600);
 }
 
+function switchView(viewId) {
+  document.querySelectorAll(".page-section").forEach((sec) => sec.classList.remove("active"));
+  document.querySelectorAll(".nav-links a").forEach((link) => link.classList.remove("active"));
+  
+  const section = document.getElementById(viewId);
+  if (section) section.classList.add("active");
+  
+  const navLink = document.querySelector(`.nav-links a[data-view="${viewId}"]`);
+  if (navLink) navLink.classList.add("active");
+}
+
 function bindEvents() {
+  const navLinks = document.querySelectorAll(".nav-links a");
+  navLinks.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchView(e.currentTarget.dataset.view);
+    });
+  });
+
   elements.clientForm.addEventListener("submit", handleSubmit);
   elements.paymentForm.addEventListener("submit", addPayment);
   document.querySelector("#newClientButton").addEventListener("click", () => {
+    switchView("view-clients");
     resetForm();
     document.querySelector(".form-panel").scrollIntoView({ behavior: "smooth", block: "start" });
   });
@@ -1050,21 +1051,8 @@ function bindEvents() {
   elements.planMonths.addEventListener("input", () => {
     if (elements.startDate.value) elements.endDate.value = planEndDate(elements.startDate.value, elements.planMonths.value);
   });
-
-  sectionLinks.forEach((link) => {
-    link.addEventListener("click", (event) => {
-      event.preventDefault();
-      setActiveSection(link.dataset.sectionLink || "overview");
-    });
-  });
-
-  window.addEventListener("hashchange", () => {
-    const sectionId = window.location.hash.replace("#", "") || "overview";
-    setActiveSection(sectionId, { updateHash: false, scroll: false });
-  });
 }
 
 bindEvents();
 resetForm();
 render();
-setActiveSection(window.location.hash.replace("#", "") || "overview", { updateHash: false, scroll: false });

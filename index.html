@@ -18,11 +18,11 @@
       </div>
 
       <nav class="nav-links" aria-label="Main sections">
-        <a href="#overview" class="active" data-section-link="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></a>
-        <a href="#clients" data-section-link="clients"><i data-lucide="users"></i><span>Clients</span></a>
-        <a href="#payments" data-section-link="payments"><i data-lucide="wallet-cards"></i><span>Payments</span></a>
-        <a href="#history" data-section-link="history"><i data-lucide="history"></i><span>History</span></a>
-        <a href="#reminders" data-section-link="reminders"><i data-lucide="bell-ring"></i><span>Reminders</span></a>
+        <a href="#view-overview" class="active" data-view="view-overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></a>
+        <a href="#view-clients" data-view="view-clients"><i data-lucide="users"></i><span>Clients</span></a>
+        <a href="#view-payments" data-view="view-payments"><i data-lucide="wallet-cards"></i><span>Payments</span></a>
+        <a href="#view-history" data-view="view-history"><i data-lucide="history"></i><span>History</span></a>
+        <a href="#view-reminders" data-view="view-reminders"><i data-lucide="bell-ring"></i><span>Reminders</span></a>
       </nav>
 
       <div class="sidebar-footer">
@@ -57,55 +57,74 @@
         </div>
       </header>
 
-      <section class="panel sync-panel" aria-labelledby="syncTitle">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">Google Sheet</p>
-            <h3 id="syncTitle">Auto Sync Settings</h3>
+      <div id="view-overview" class="page-section active">
+        <section class="panel sync-panel" aria-labelledby="syncTitle">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Google Sheet</p>
+              <h3 id="syncTitle">Auto Sync Settings</h3>
+            </div>
+            <span class="badge" id="syncStatus">Not connected</span>
           </div>
-          <span class="badge" id="syncStatus">Not connected</span>
-        </div>
-        <div class="sync-row">
-          <label>
-            Apps Script Web App URL
-            <input id="sheetWebAppUrl" placeholder="https://script.google.com/macros/s/..." />
-          </label>
-          <button class="ghost-button" id="saveSheetUrlButton">
-            <i data-lucide="link"></i>
-            Save URL
-          </button>
-          <button class="primary-button" id="syncAllButton">
-            <i data-lucide="refresh-cw"></i>
-            Sync All
-          </button>
-        </div>
-      </section>
+          <div class="sync-row">
+            <label>
+              Apps Script Web App URL
+              <input id="sheetWebAppUrl" placeholder="https://script.google.com/macros/s/..." />
+            </label>
+            <button class="ghost-button" id="saveSheetUrlButton">
+              <i data-lucide="link"></i>
+              Save URL
+            </button>
+            <button class="primary-button" id="syncAllButton">
+              <i data-lucide="refresh-cw"></i>
+              Sync All
+            </button>
+          </div>
+        </section>
 
-      <section id="overview" class="overview-grid page-section" aria-label="Dashboard summary">
-        <article class="metric accent-teal">
-          <p>Total Clients</p>
-          <strong id="totalClients">0</strong>
-          <span>Active PDC plans</span>
-        </article>
-        <article class="metric accent-blue">
-          <p>This Month Meetings</p>
-          <strong id="monthMeetings">0</strong>
-          <span>Scheduled reviews</span>
-        </article>
-        <article class="metric accent-amber">
-          <p>Pending Payment</p>
-          <strong id="pendingAmount">₹0</strong>
-          <span>Collectable balance</span>
-        </article>
-        <article class="metric accent-rose">
-          <p>Due Soon</p>
-          <strong id="dueSoonCount">0</strong>
-          <span>Next 7 days</span>
-        </article>
-      </section>
+        <section id="overview" class="overview-grid" aria-label="Dashboard summary">
+          <article class="metric accent-teal">
+            <p>Total Clients</p>
+            <strong id="totalClients">0</strong>
+            <span>Active PDC plans</span>
+          </article>
+          <article class="metric accent-blue">
+            <p>This Month Meetings</p>
+            <strong id="monthMeetings">0</strong>
+            <span>Scheduled reviews</span>
+          </article>
+          <article class="metric accent-amber">
+            <p>Pending Payment</p>
+            <strong id="pendingAmount">₹0</strong>
+            <span>Collectable balance</span>
+          </article>
+          <article class="metric accent-rose">
+            <p>Due Soon</p>
+            <strong id="dueSoonCount">0</strong>
+            <span>Next 7 days</span>
+          </article>
+        </section>
+      </div>
 
-      <section id="clientWorkspace" class="workspace-grid">
-        <section class="panel form-panel" aria-labelledby="clientFormTitle">
+      <div id="view-reminders" class="page-section">
+        <section id="reminders" class="panel reminder-panel" aria-labelledby="reminderTitle">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Action required</p>
+              <h3 id="reminderTitle">Meeting & Follow-up Reminders</h3>
+            </div>
+            <button class="ghost-button small" id="printButton">
+              <i data-lucide="printer"></i>
+              Print
+            </button>
+          </div>
+          <div id="reminderList" class="reminder-list"></div>
+        </section>
+      </div>
+
+      <div id="view-clients" class="page-section">
+        <div class="clients-layout">
+          <section class="panel form-panel" aria-labelledby="clientFormTitle">
           <div class="panel-heading">
             <div>
               <p class="eyebrow">Entry</p>
@@ -200,22 +219,7 @@
           </form>
         </section>
 
-        <section id="reminders" class="panel reminder-panel" aria-labelledby="reminderTitle">
-          <div class="panel-heading">
-            <div>
-              <p class="eyebrow">Action required</p>
-              <h3 id="reminderTitle">Meeting & Follow-up Reminders</h3>
-            </div>
-            <button class="ghost-button small" id="printButton">
-              <i data-lucide="printer"></i>
-              Print
-            </button>
-          </div>
-          <div id="reminderList" class="reminder-list"></div>
-        </section>
-      </section>
-
-      <section id="clients" class="panel data-panel page-section" aria-labelledby="clientsTitle">
+      <section id="clients" class="panel data-panel" aria-labelledby="clientsTitle">
         <div class="panel-heading table-heading">
           <div>
             <p class="eyebrow">Database</p>
@@ -256,8 +260,10 @@
           </table>
         </div>
       </section>
+      </div>
 
-      <section id="history" class="panel history-panel page-section" aria-labelledby="historyTitle">
+      <div id="view-history" class="page-section">
+      <section id="history" class="panel history-panel" aria-labelledby="historyTitle">
         <div class="panel-heading table-heading">
           <div>
             <p class="eyebrow">Client workflow</p>
@@ -319,8 +325,10 @@
           </section>
         </div>
       </section>
+      </div>
 
-      <section id="payments" class="panel payment-panel page-section" aria-labelledby="paymentsTitle">
+      <div id="view-payments" class="page-section">
+      <section id="payments" class="panel payment-panel" aria-labelledby="paymentsTitle">
         <div class="panel-heading">
           <div>
             <p class="eyebrow">Accounts</p>
@@ -340,6 +348,7 @@
           <div class="ledger" id="ledgerList"></div>
         </div>
       </section>
+      </div>
     </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
