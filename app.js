@@ -557,6 +557,7 @@ function renderPayments() {
   const totalReceived = clients.reduce((sum, client) => sum + receivedFor(client), 0);
   const percent = totalService ? Math.min(Math.round((totalReceived / totalService) * 100), 100) : 0;
   elements.paymentDonut.style.setProperty("--percent", percent);
+  elements.paymentDonut.setAttribute("aria-valuenow", percent);
   elements.collectionPercent.textContent = `${percent}%`;
   elements.collectionText.textContent = `${formatCurrency(totalReceived)} received of ${formatCurrency(totalService)}`;
 
@@ -581,7 +582,7 @@ function renderPayments() {
       .join("") || `<div class="empty-state">All visible payments are fully received.</div>`;
 }
 
-function resetForm() {
+function resetForm(shouldFocus = true) {
   elements.clientForm.reset();
   elements.clientId.value = "";
   elements.planMonths.value = 3;
@@ -593,7 +594,7 @@ function resetForm() {
   elements.followUpDate.value = "";
   elements.endDate.value = planEndDate(today, 3);
   elements.paymentDate.value = today;
-  elements.clientName.focus();
+  if (shouldFocus) elements.clientName.focus();
 }
 
 function handleSubmit(event) {
@@ -667,6 +668,7 @@ function handleSubmit(event) {
 function editClient(id) {
   const client = clients.find((item) => item.id === id);
   if (!client) return;
+  resetForm(false);
   elements.clientId.value = client.id;
   elements.clientName.value = client.name;
   elements.phone.value = client.phone;
@@ -681,6 +683,7 @@ function editClient(id) {
   elements.status.value = client.status;
   elements.notes.value = client.notes || "";
   switchView("view-clients");
+  elements.clientName.focus();
   document.querySelector(".form-panel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -1004,13 +1007,19 @@ function showToast(message) {
 
 function switchView(viewId) {
   document.querySelectorAll(".page-section").forEach((sec) => sec.classList.remove("active"));
-  document.querySelectorAll(".nav-links a").forEach((link) => link.classList.remove("active"));
-  
+  document.querySelectorAll(".nav-links a").forEach((link) => {
+    link.classList.remove("active");
+    link.removeAttribute("aria-current");
+  });
+
   const section = document.getElementById(viewId);
   if (section) section.classList.add("active");
-  
+
   const navLink = document.querySelector(`.nav-links a[data-view="${viewId}"]`);
-  if (navLink) navLink.classList.add("active");
+  if (navLink) {
+    navLink.classList.add("active");
+    navLink.setAttribute("aria-current", "page");
+  }
 }
 
 function bindEvents() {
@@ -1054,5 +1063,5 @@ function bindEvents() {
 }
 
 bindEvents();
-resetForm();
+resetForm(false);
 render();

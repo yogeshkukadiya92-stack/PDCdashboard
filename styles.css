@@ -387,11 +387,17 @@ textarea {
   min-height: 84px;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
   border-color: var(--teal);
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.13);
+}
+
+button:focus-visible,
+.file-button:focus-within {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
 }
 
 .reminder-list {
@@ -475,6 +481,12 @@ textarea:focus {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding-left: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-box:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.13);
 }
 
 .search-box input {
@@ -501,6 +513,10 @@ td {
   border-top: 1px solid var(--line);
   vertical-align: middle;
   font-size: 14px;
+}
+
+tbody tr:hover {
+  background-color: var(--surface-soft);
 }
 
 th {

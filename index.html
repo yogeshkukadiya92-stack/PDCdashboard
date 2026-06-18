@@ -228,7 +228,7 @@
           <div class="table-tools">
             <div class="search-box">
               <i data-lucide="search"></i>
-              <input id="searchInput" placeholder="Search client, phone, status" />
+              <input id="searchInput" placeholder="Search client, phone, status" aria-label="Search clients" />
             </div>
             <select id="statusFilter" aria-label="Filter by status">
               <option value="All">All Status</option>
@@ -337,7 +337,7 @@
         </div>
         <div class="payment-grid">
           <div class="chart-card">
-            <div class="donut" id="paymentDonut" style="--percent: 0">
+            <div class="donut" id="paymentDonut" style="--percent: 0" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Collection progress">
               <span id="collectionPercent">0%</span>
             </div>
             <div>
