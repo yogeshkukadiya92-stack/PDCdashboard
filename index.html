@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PDC Client Dashboard</title>
-    <link rel="stylesheet" href="./styles.css?v=20260622-3" />
+    <link rel="stylesheet" href="./styles.css?v=20260622-4" />
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   </head>
   <body>
@@ -18,11 +18,11 @@
       </div>
 
       <nav class="nav-links" aria-label="Main sections">
-        <a href="#view-overview" class="active" data-view="view-overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></a>
-        <a href="#view-clients" data-view="view-clients"><i data-lucide="users"></i><span>Clients</span></a>
-        <a href="#view-payments" data-view="view-payments"><i data-lucide="wallet-cards"></i><span>Payments</span></a>
-        <a href="#view-history" data-view="view-history"><i data-lucide="history"></i><span>History</span></a>
-        <a href="#view-reminders" data-view="view-reminders"><i data-lucide="bell-ring"></i><span>Reminders</span></a>
+        <a href="#view-overview" class="active" data-view="view-overview" onclick="event.stopImmediatePropagation(); switchView('view-overview'); return false;"><i data-lucide="layout-dashboard"></i><span>Overview</span></a>
+        <a href="#view-clients" data-view="view-clients" onclick="event.stopImmediatePropagation(); switchView('view-clients'); return false;"><i data-lucide="users"></i><span>Clients</span></a>
+        <a href="#view-payments" data-view="view-payments" onclick="event.stopImmediatePropagation(); switchView('view-payments'); return false;"><i data-lucide="wallet-cards"></i><span>Payments</span></a>
+        <a href="#view-history" data-view="view-history" onclick="event.stopImmediatePropagation(); switchView('view-history'); return false;"><i data-lucide="history"></i><span>History</span></a>
+        <a href="#view-reminders" data-view="view-reminders" onclick="event.stopImmediatePropagation(); switchView('view-reminders'); return false;"><i data-lucide="bell-ring"></i><span>Reminders</span></a>
       </nav>
 
       <div class="sidebar-footer">
@@ -38,10 +38,10 @@
           <h2>PDC Operations Dashboard</h2>
         </div>
         <div class="topbar-actions">
-          <button class="icon-button" id="notifyButton" type="button" title="Enable notifications" aria-label="Enable notifications">
+          <button class="icon-button" id="notifyButton" type="button" title="Enable notifications" aria-label="Enable notifications" onclick="event.stopImmediatePropagation(); enableNotifications(); return false;">
             <i data-lucide="bell"></i>
           </button>
-          <button class="ghost-button" id="exportButton" type="button">
+          <button class="ghost-button" id="exportButton" type="button" onclick="event.stopImmediatePropagation(); exportData(); return false;">
             <i data-lucide="download"></i>
             Export
           </button>
@@ -50,7 +50,7 @@
             Import
             <input id="importFile" type="file" accept="application/json" />
           </label>
-          <button class="primary-button" id="newClientButton" type="button">
+          <button class="primary-button" id="newClientButton" type="button" onclick="event.stopImmediatePropagation(); switchView('view-clients'); resetForm(); document.querySelector('.form-panel').scrollIntoView({ behavior: 'smooth', block: 'start' }); return false;">
             <i data-lucide="user-plus"></i>
             New Client
           </button>
@@ -71,11 +71,11 @@
               Apps Script Web App URL
               <input id="sheetWebAppUrl" placeholder="https://script.google.com/macros/s/..." />
             </label>
-            <button class="ghost-button" id="saveSheetUrlButton" type="button">
+            <button class="ghost-button" id="saveSheetUrlButton" type="button" onclick="event.stopImmediatePropagation(); saveSheetUrl(); return false;">
               <i data-lucide="link"></i>
               Save URL
             </button>
-            <button class="primary-button" id="syncAllButton" type="button">
+            <button class="primary-button" id="syncAllButton" type="button" onclick="event.stopImmediatePropagation(); syncAllToSheet(); return false;">
               <i data-lucide="refresh-cw"></i>
               Sync All
             </button>
@@ -113,7 +113,7 @@
               <p class="eyebrow">Action required</p>
               <h3 id="reminderTitle">Meeting & Follow-up Reminders</h3>
             </div>
-            <button class="ghost-button small" id="printButton" type="button">
+            <button class="ghost-button small" id="printButton" type="button" onclick="event.stopImmediatePropagation(); window.print(); return false;">
               <i data-lucide="printer"></i>
               Print
             </button>
@@ -130,7 +130,7 @@
               <p class="eyebrow">Entry</p>
               <h3 id="clientFormTitle">Add / Update Client</h3>
             </div>
-            <button class="icon-button subtle" id="resetFormButton" type="button" title="Clear form" aria-label="Clear form">
+            <button class="icon-button subtle" id="resetFormButton" type="button" title="Clear form" aria-label="Clear form" onclick="event.stopImmediatePropagation(); resetForm(); return false;">
               <i data-lucide="rotate-ccw"></i>
             </button>
           </div>
@@ -211,7 +211,7 @@
               <textarea id="notes" rows="3" placeholder="Diet focus, special condition, follow-up points"></textarea>
             </label>
 
-            <button class="primary-button full" type="submit">
+            <button class="primary-button full" type="submit" onclick="event.stopImmediatePropagation(); document.getElementById('clientForm').requestSubmit(); return false;">
               <i data-lucide="save"></i>
               Save Client
             </button>
@@ -317,7 +317,7 @@
                   <input id="paymentNote" placeholder="Receipt / reference" />
                 </label>
               </div>
-              <button class="primary-button full" type="submit">
+              <button class="primary-button full" type="submit" onclick="event.stopImmediatePropagation(); document.getElementById('paymentForm').requestSubmit(); return false;">
                 <i data-lucide="plus"></i>
                 Add Installment
               </button>
@@ -355,6 +355,6 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-    <script src="./app.js?v=20260622-3"></script>
+    <script src="./app.js?v=20260622-4"></script>
   </body>
 </html>

@@ -404,11 +404,11 @@ function renderClients() {
           <td>${getStatusBadge(client.status)}</td>
           <td>
             <div class="row-actions">
-              <button class="action-button" type="button" data-action="profile" data-id="${client.id}" title="View history" aria-label="View history"><i data-lucide="history"></i></button>
-              <button class="action-button" type="button" data-action="remind" data-id="${client.id}" title="Reminder message" aria-label="Reminder message"><i data-lucide="message-circle"></i></button>
-              <button class="action-button" type="button" data-action="paid" data-id="${client.id}" title="Mark paid" aria-label="Mark paid"><i data-lucide="badge-indian-rupee"></i></button>
-              <button class="action-button" type="button" data-action="edit" data-id="${client.id}" title="Edit client" aria-label="Edit client"><i data-lucide="pencil"></i></button>
-              <button class="action-button" type="button" data-action="delete" data-id="${client.id}" title="Delete client" aria-label="Delete client"><i data-lucide="trash-2"></i></button>
+              <button class="action-button" type="button" data-action="profile" data-id="${client.id}" title="View history" aria-label="View history" onclick="event.stopImmediatePropagation(); handleAction(event); return false;"><i data-lucide="history"></i></button>
+              <button class="action-button" type="button" data-action="remind" data-id="${client.id}" title="Reminder message" aria-label="Reminder message" onclick="event.stopImmediatePropagation(); handleAction(event); return false;"><i data-lucide="message-circle"></i></button>
+              <button class="action-button" type="button" data-action="paid" data-id="${client.id}" title="Mark paid" aria-label="Mark paid" onclick="event.stopImmediatePropagation(); handleAction(event); return false;"><i data-lucide="badge-indian-rupee"></i></button>
+              <button class="action-button" type="button" data-action="edit" data-id="${client.id}" title="Edit client" aria-label="Edit client" onclick="event.stopImmediatePropagation(); handleAction(event); return false;"><i data-lucide="pencil"></i></button>
+              <button class="action-button" type="button" data-action="delete" data-id="${client.id}" title="Delete client" aria-label="Delete client" onclick="event.stopImmediatePropagation(); handleAction(event); return false;"><i data-lucide="trash-2"></i></button>
             </div>
           </td>
         </tr>
@@ -448,7 +448,7 @@ function renderReminders() {
                 <strong>${escapeHtml(item.client.name)} <span class="badge warning">Renewal ${item.days} days</span></strong>
                 <p>Plan end: ${formatDate(item.client.endDate)} · Pending: ${formatCurrency(pendingFor(item.client))}</p>
               </div>
-              <button class="ghost-button small" type="button" data-action="renewal" data-id="${item.client.id}">
+              <button class="ghost-button small" type="button" data-action="renewal" data-id="${item.client.id}" onclick="event.stopImmediatePropagation(); handleAction(event); return false;">
                 <i data-lucide="repeat"></i>
                 Renewal
               </button>
@@ -462,7 +462,7 @@ function renderReminders() {
                 <strong>${escapeHtml(item.client.name)} <span class="badge warning">Follow-up ${item.days < 0 ? "Overdue" : `${item.days} days`}</span></strong>
                 <p>Interested client · Follow-up: ${formatDate(item.client.followUpDate)} · Phone: ${escapeHtml(item.client.phone)}</p>
               </div>
-              <button class="ghost-button small" type="button" data-action="followup" data-id="${item.client.id}">
+              <button class="ghost-button small" type="button" data-action="followup" data-id="${item.client.id}" onclick="event.stopImmediatePropagation(); handleAction(event); return false;">
                 <i data-lucide="phone-forwarded"></i>
                 Follow Up
               </button>
@@ -475,7 +475,7 @@ function renderReminders() {
               <strong>${escapeHtml(item.client.name)} ${getMeetingBadge(item.days)}</strong>
               <p>PDC meeting: ${formatDate(item.meeting.date)} · Pending: ${formatCurrency(pendingFor(item.client))}</p>
             </div>
-            <button class="ghost-button small" type="button" data-action="remind" data-id="${item.client.id}">
+            <button class="ghost-button small" type="button" data-action="remind" data-id="${item.client.id}" onclick="event.stopImmediatePropagation(); handleAction(event); return false;">
               <i data-lucide="send"></i>
               Message
             </button>
@@ -520,10 +520,10 @@ function renderDetails() {
               <div class="timeline-meta">${getMeetingStatusBadge(meeting.status)} ${meeting.status === "Pending" ? getMeetingBadge(days) : ""}</div>
             </div>
             <div class="timeline-actions">
-              <button class="ghost-button small" type="button" data-action="meeting-done" data-id="${client.id}" data-meeting-id="${meeting.id}"><i data-lucide="check"></i>Done</button>
-              <button class="ghost-button small" type="button" data-action="meeting-missed" data-id="${client.id}" data-meeting-id="${meeting.id}"><i data-lucide="x"></i>Missed</button>
-              <button class="ghost-button small" type="button" data-action="meeting-pending" data-id="${client.id}" data-meeting-id="${meeting.id}"><i data-lucide="clock"></i>Pending</button>
-              <button class="ghost-button small" type="button" data-action="meeting-note" data-id="${client.id}" data-meeting-id="${meeting.id}"><i data-lucide="notebook-pen"></i>Note</button>
+              <button class="ghost-button small" type="button" data-action="meeting-done" data-id="${client.id}" data-meeting-id="${meeting.id}" onclick="event.stopImmediatePropagation(); handleAction(event); return false;"><i data-lucide="check"></i>Done</button>
+              <button class="ghost-button small" type="button" data-action="meeting-missed" data-id="${client.id}" data-meeting-id="${meeting.id}" onclick="event.stopImmediatePropagation(); handleAction(event); return false;"><i data-lucide="x"></i>Missed</button>
+              <button class="ghost-button small" type="button" data-action="meeting-pending" data-id="${client.id}" data-meeting-id="${meeting.id}" onclick="event.stopImmediatePropagation(); handleAction(event); return false;"><i data-lucide="clock"></i>Pending</button>
+              <button class="ghost-button small" type="button" data-action="meeting-note" data-id="${client.id}" data-meeting-id="${meeting.id}" onclick="event.stopImmediatePropagation(); handleAction(event); return false;"><i data-lucide="notebook-pen"></i>Note</button>
             </div>
           </div>
           <p>${detail || "No meeting notes yet."}</p>
@@ -544,7 +544,7 @@ function renderDetails() {
                 <strong>${formatCurrency(payment.amount)} · ${escapeHtml(payment.mode)}</strong>
                 <p>${formatDate(payment.date)}${payment.note ? ` · ${escapeHtml(payment.note)}` : ""}</p>
               </div>
-              <button class="action-button" type="button" data-action="payment-delete" data-id="${client.id}" data-payment-id="${payment.id}" title="Delete payment" aria-label="Delete payment"><i data-lucide="trash-2"></i></button>
+              <button class="action-button" type="button" data-action="payment-delete" data-id="${client.id}" data-payment-id="${payment.id}" title="Delete payment" aria-label="Delete payment" onclick="event.stopImmediatePropagation(); handleAction(event); return false;"><i data-lucide="trash-2"></i></button>
             </div>
           </article>
         `
