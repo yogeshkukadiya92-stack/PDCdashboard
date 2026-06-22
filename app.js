@@ -98,6 +98,7 @@ const elements = {
   ledgerList: document.querySelector("#ledgerList"),
   sheetWebAppUrl: document.querySelector("#sheetWebAppUrl"),
   syncStatus: document.querySelector("#syncStatus"),
+  formStatus: document.querySelector("#formStatus"),
   toast: document.querySelector("#toast")
 };
 
@@ -320,6 +321,12 @@ function renderSyncStatus() {
   elements.syncStatus.className = `badge ${url ? "success" : "warning"}`;
 }
 
+function setFormStatus(message) {
+  if (elements.formStatus) {
+    elements.formStatus.textContent = message;
+  }
+}
+
 function filteredClients() {
   const query = elements.searchInput.value.trim().toLowerCase();
   const status = elements.statusFilter.value;
@@ -397,11 +404,11 @@ function renderClients() {
           <td>${getStatusBadge(client.status)}</td>
           <td>
             <div class="row-actions">
-              <button class="action-button" data-action="profile" data-id="${client.id}" title="View history" aria-label="View history"><i data-lucide="history"></i></button>
-              <button class="action-button" data-action="remind" data-id="${client.id}" title="Reminder message" aria-label="Reminder message"><i data-lucide="message-circle"></i></button>
-              <button class="action-button" data-action="paid" data-id="${client.id}" title="Mark paid" aria-label="Mark paid"><i data-lucide="badge-indian-rupee"></i></button>
-              <button class="action-button" data-action="edit" data-id="${client.id}" title="Edit client" aria-label="Edit client"><i data-lucide="pencil"></i></button>
-              <button class="action-button" data-action="delete" data-id="${client.id}" title="Delete client" aria-label="Delete client"><i data-lucide="trash-2"></i></button>
+              <button class="action-button" type="button" data-action="profile" data-id="${client.id}" title="View history" aria-label="View history"><i data-lucide="history"></i></button>
+              <button class="action-button" type="button" data-action="remind" data-id="${client.id}" title="Reminder message" aria-label="Reminder message"><i data-lucide="message-circle"></i></button>
+              <button class="action-button" type="button" data-action="paid" data-id="${client.id}" title="Mark paid" aria-label="Mark paid"><i data-lucide="badge-indian-rupee"></i></button>
+              <button class="action-button" type="button" data-action="edit" data-id="${client.id}" title="Edit client" aria-label="Edit client"><i data-lucide="pencil"></i></button>
+              <button class="action-button" type="button" data-action="delete" data-id="${client.id}" title="Delete client" aria-label="Delete client"><i data-lucide="trash-2"></i></button>
             </div>
           </td>
         </tr>
@@ -441,7 +448,7 @@ function renderReminders() {
                 <strong>${escapeHtml(item.client.name)} <span class="badge warning">Renewal ${item.days} days</span></strong>
                 <p>Plan end: ${formatDate(item.client.endDate)} · Pending: ${formatCurrency(pendingFor(item.client))}</p>
               </div>
-              <button class="ghost-button small" data-action="renewal" data-id="${item.client.id}">
+              <button class="ghost-button small" type="button" data-action="renewal" data-id="${item.client.id}">
                 <i data-lucide="repeat"></i>
                 Renewal
               </button>
@@ -455,7 +462,7 @@ function renderReminders() {
                 <strong>${escapeHtml(item.client.name)} <span class="badge warning">Follow-up ${item.days < 0 ? "Overdue" : `${item.days} days`}</span></strong>
                 <p>Interested client · Follow-up: ${formatDate(item.client.followUpDate)} · Phone: ${escapeHtml(item.client.phone)}</p>
               </div>
-              <button class="ghost-button small" data-action="followup" data-id="${item.client.id}">
+              <button class="ghost-button small" type="button" data-action="followup" data-id="${item.client.id}">
                 <i data-lucide="phone-forwarded"></i>
                 Follow Up
               </button>
@@ -468,7 +475,7 @@ function renderReminders() {
               <strong>${escapeHtml(item.client.name)} ${getMeetingBadge(item.days)}</strong>
               <p>PDC meeting: ${formatDate(item.meeting.date)} · Pending: ${formatCurrency(pendingFor(item.client))}</p>
             </div>
-            <button class="ghost-button small" data-action="remind" data-id="${item.client.id}">
+            <button class="ghost-button small" type="button" data-action="remind" data-id="${item.client.id}">
               <i data-lucide="send"></i>
               Message
             </button>
@@ -513,10 +520,10 @@ function renderDetails() {
               <div class="timeline-meta">${getMeetingStatusBadge(meeting.status)} ${meeting.status === "Pending" ? getMeetingBadge(days) : ""}</div>
             </div>
             <div class="timeline-actions">
-              <button class="ghost-button small" data-action="meeting-done" data-id="${client.id}" data-meeting-id="${meeting.id}"><i data-lucide="check"></i>Done</button>
-              <button class="ghost-button small" data-action="meeting-missed" data-id="${client.id}" data-meeting-id="${meeting.id}"><i data-lucide="x"></i>Missed</button>
-              <button class="ghost-button small" data-action="meeting-pending" data-id="${client.id}" data-meeting-id="${meeting.id}"><i data-lucide="clock"></i>Pending</button>
-              <button class="ghost-button small" data-action="meeting-note" data-id="${client.id}" data-meeting-id="${meeting.id}"><i data-lucide="notebook-pen"></i>Note</button>
+              <button class="ghost-button small" type="button" data-action="meeting-done" data-id="${client.id}" data-meeting-id="${meeting.id}"><i data-lucide="check"></i>Done</button>
+              <button class="ghost-button small" type="button" data-action="meeting-missed" data-id="${client.id}" data-meeting-id="${meeting.id}"><i data-lucide="x"></i>Missed</button>
+              <button class="ghost-button small" type="button" data-action="meeting-pending" data-id="${client.id}" data-meeting-id="${meeting.id}"><i data-lucide="clock"></i>Pending</button>
+              <button class="ghost-button small" type="button" data-action="meeting-note" data-id="${client.id}" data-meeting-id="${meeting.id}"><i data-lucide="notebook-pen"></i>Note</button>
             </div>
           </div>
           <p>${detail || "No meeting notes yet."}</p>
@@ -537,7 +544,7 @@ function renderDetails() {
                 <strong>${formatCurrency(payment.amount)} · ${escapeHtml(payment.mode)}</strong>
                 <p>${formatDate(payment.date)}${payment.note ? ` · ${escapeHtml(payment.note)}` : ""}</p>
               </div>
-              <button class="action-button" data-action="payment-delete" data-id="${client.id}" data-payment-id="${payment.id}" title="Delete payment" aria-label="Delete payment"><i data-lucide="trash-2"></i></button>
+              <button class="action-button" type="button" data-action="payment-delete" data-id="${client.id}" data-payment-id="${payment.id}" title="Delete payment" aria-label="Delete payment"><i data-lucide="trash-2"></i></button>
             </div>
           </article>
         `
@@ -594,6 +601,7 @@ function resetForm() {
   elements.endDate.value = planEndDate(today, 3);
   elements.paymentDate.value = today;
   elements.clientName.focus();
+  setFormStatus("Ready to save client details.");
 }
 
 function handleSubmit(event) {
@@ -617,6 +625,7 @@ function handleSubmit(event) {
 
   if (baseClient.receivedAmount > baseClient.serviceAmount) {
     showToast("Received payment service amount se zyada nahi ho sakta.");
+    setFormStatus("Save blocked: received amount cannot exceed service amount.");
     return;
   }
 
@@ -650,12 +659,14 @@ function handleSubmit(event) {
     savedClient = client;
     selectedClientId = client.id;
     showToast("Client record updated.");
+    setFormStatus(`${client.name} updated successfully.`);
   } else {
     const client = normalizeClient(baseClient);
     clients.push(client);
     savedClient = client;
     selectedClientId = client.id;
     showToast("New client added with monthly PDC schedule.");
+    setFormStatus(`${client.name} saved successfully.`);
   }
 
   saveClients();
@@ -682,6 +693,7 @@ function editClient(id) {
   elements.notes.value = client.notes || "";
   switchView("view-clients");
   document.querySelector(".form-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+  setFormStatus(`Editing ${client.name}. Press Save Client to apply changes.`);
 }
 
 function deleteClient(id) {
@@ -702,6 +714,7 @@ function markPaid(id) {
   const pending = pendingFor(client);
   if (pending <= 0) {
     showToast("Payment already fully received.");
+    setFormStatus("No payment added because the client is already fully paid.");
     return;
   }
   client.payments.push({
@@ -715,6 +728,7 @@ function markPaid(id) {
   syncClientToSheet(client, "payment_marked_full", { amount: pending, mode: client.paymentMode });
   render();
   showToast(`${client.name} marked as fully paid.`);
+  setFormStatus(`${client.name} marked fully paid.`);
 }
 
 function addPayment(event) {
@@ -724,10 +738,12 @@ function addPayment(event) {
   const amount = Number(elements.paymentAmount.value || 0);
   if (amount <= 0) {
     showToast("Installment amount valid hona chahiye.");
+    setFormStatus("Installment amount must be greater than zero.");
     return;
   }
   if (amount > pendingFor(client)) {
     showToast("Installment pending amount se zyada nahi ho sakta.");
+    setFormStatus("Installment cannot exceed the pending amount.");
     return;
   }
   client.payments.push({
@@ -743,6 +759,7 @@ function addPayment(event) {
   elements.paymentDate.value = toDateValue(new Date());
   render();
   showToast("Payment installment added.");
+  setFormStatus(`${formatCurrency(amount)} installment added for ${client.name}.`);
 }
 
 function deletePayment(clientId, paymentId) {
@@ -753,6 +770,7 @@ function deletePayment(clientId, paymentId) {
   syncClientToSheet(client, "payment_deleted", { paymentId });
   render();
   showToast("Payment installment deleted.");
+  setFormStatus("Payment installment deleted.");
 }
 
 function updateMeeting(clientId, meetingId, status) {
@@ -772,6 +790,7 @@ function updateMeeting(clientId, meetingId, status) {
   syncClientToSheet(client, "meeting_updated", { meetingId, status });
   render();
   showToast(`Meeting marked ${status}.`);
+  setFormStatus(`Meeting updated to ${status}.`);
 }
 
 function editMeetingNote(clientId, meetingId) {
@@ -785,6 +804,7 @@ function editMeetingNote(clientId, meetingId) {
   syncClientToSheet(client, "meeting_note_saved", { meetingId });
   render();
   showToast("Meeting note saved.");
+  setFormStatus("Meeting note saved.");
 }
 
 function reminderMessage(client) {
@@ -1003,14 +1023,26 @@ function showToast(message) {
 }
 
 function switchView(viewId) {
+  const viewAliases = {
+    overview: "view-overview",
+    clients: "view-clients",
+    history: "view-history",
+    payments: "view-payments",
+    reminders: "view-reminders"
+  };
+  const resolvedViewId = viewAliases[viewId] || viewId;
+
   document.querySelectorAll(".page-section").forEach((sec) => sec.classList.remove("active"));
   document.querySelectorAll(".nav-links a").forEach((link) => link.classList.remove("active"));
-  
-  const section = document.getElementById(viewId);
+
+  const section = document.getElementById(resolvedViewId);
   if (section) section.classList.add("active");
-  
-  const navLink = document.querySelector(`.nav-links a[data-view="${viewId}"]`);
+
+  const navLink = document.querySelector(`.nav-links a[data-view="${resolvedViewId}"]`);
   if (navLink) navLink.classList.add("active");
+  if (window.location.hash !== `#${resolvedViewId}`) {
+    history.replaceState(null, "", `#${resolvedViewId}`);
+  }
 }
 
 function bindEvents() {
@@ -1051,8 +1083,13 @@ function bindEvents() {
   elements.planMonths.addEventListener("input", () => {
     if (elements.startDate.value) elements.endDate.value = planEndDate(elements.startDate.value, elements.planMonths.value);
   });
+
+  window.addEventListener("hashchange", () => {
+    switchView(window.location.hash.replace("#", "") || "view-overview");
+  });
 }
 
 bindEvents();
 resetForm();
+switchView(window.location.hash.replace("#", "") || "view-overview");
 render();

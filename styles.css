@@ -624,6 +624,14 @@ th {
   line-height: 1.45;
 }
 
+.form-status {
+  margin: 6px 0 0;
+  color: var(--teal-dark);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .detail-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

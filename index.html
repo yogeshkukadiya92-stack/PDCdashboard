@@ -38,10 +38,10 @@
           <h2>PDC Operations Dashboard</h2>
         </div>
         <div class="topbar-actions">
-          <button class="icon-button" id="notifyButton" title="Enable notifications" aria-label="Enable notifications">
+          <button class="icon-button" id="notifyButton" type="button" title="Enable notifications" aria-label="Enable notifications">
             <i data-lucide="bell"></i>
           </button>
-          <button class="ghost-button" id="exportButton">
+          <button class="ghost-button" id="exportButton" type="button">
             <i data-lucide="download"></i>
             Export
           </button>
@@ -50,7 +50,7 @@
             Import
             <input id="importFile" type="file" accept="application/json" />
           </label>
-          <button class="primary-button" id="newClientButton">
+          <button class="primary-button" id="newClientButton" type="button">
             <i data-lucide="user-plus"></i>
             New Client
           </button>
@@ -71,11 +71,11 @@
               Apps Script Web App URL
               <input id="sheetWebAppUrl" placeholder="https://script.google.com/macros/s/..." />
             </label>
-            <button class="ghost-button" id="saveSheetUrlButton">
+            <button class="ghost-button" id="saveSheetUrlButton" type="button">
               <i data-lucide="link"></i>
               Save URL
             </button>
-            <button class="primary-button" id="syncAllButton">
+            <button class="primary-button" id="syncAllButton" type="button">
               <i data-lucide="refresh-cw"></i>
               Sync All
             </button>
@@ -113,7 +113,7 @@
               <p class="eyebrow">Action required</p>
               <h3 id="reminderTitle">Meeting & Follow-up Reminders</h3>
             </div>
-            <button class="ghost-button small" id="printButton">
+            <button class="ghost-button small" id="printButton" type="button">
               <i data-lucide="printer"></i>
               Print
             </button>
@@ -130,7 +130,7 @@
               <p class="eyebrow">Entry</p>
               <h3 id="clientFormTitle">Add / Update Client</h3>
             </div>
-            <button class="icon-button subtle" id="resetFormButton" title="Clear form" aria-label="Clear form">
+            <button class="icon-button subtle" id="resetFormButton" type="button" title="Clear form" aria-label="Clear form">
               <i data-lucide="rotate-ccw"></i>
             </button>
           </div>
@@ -216,6 +216,7 @@
               Save Client
             </button>
             <p class="form-note">Monthly PDC schedule is created automatically from the start date and plan duration.</p>
+            <p class="form-status" id="formStatus" aria-live="polite">Ready to save client details.</p>
           </form>
         </section>
 
