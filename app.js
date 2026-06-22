@@ -56,6 +56,7 @@ const seedClients = [
 
 let clients = loadClients();
 let selectedClientId = clients[0]?.id || "";
+let lastSavedClientId = "";
 
 const elements = {
   todayLabel: document.querySelector("#todayLabel"),
@@ -384,7 +385,7 @@ function renderClients() {
         .slice(0, 2)
         .toUpperCase();
       return `
-        <tr>
+        <tr class="${client.id === lastSavedClientId ? "row-highlight" : ""}">
           <td>
             <div class="client-main">
               <div class="avatar">${escapeHtml(initials)}</div>
@@ -623,6 +624,13 @@ function handleSubmit(event) {
     createdAt: new Date().toISOString()
   };
 
+  if (!baseClient.name || !baseClient.phone) {
+    showToast("Client name aur mobile number required hai.");
+    setFormStatus("Save blocked: client name and mobile number are required.");
+    (baseClient.name ? elements.phone : elements.clientName).focus();
+    return;
+  }
+
   if (baseClient.receivedAmount > baseClient.serviceAmount) {
     showToast("Received payment service amount se zyada nahi ho sakta.");
     setFormStatus("Save blocked: received amount cannot exceed service amount.");
@@ -659,6 +667,7 @@ function handleSubmit(event) {
     clients[existingIndex] = client;
     savedClient = client;
     selectedClientId = client.id;
+    lastSavedClientId = client.id;
     successMessage = `${client.name} updated successfully. Check Client Records below.`;
     showToast("Client record updated.");
   } else {
@@ -666,6 +675,7 @@ function handleSubmit(event) {
     clients.push(client);
     savedClient = client;
     selectedClientId = client.id;
+    lastSavedClientId = client.id;
     successMessage = `${client.name} saved successfully. Check Client Records below.`;
     showToast("New client added with monthly PDC schedule.");
   }
@@ -675,6 +685,9 @@ function handleSubmit(event) {
   render();
   resetForm();
   setFormStatus(successMessage);
+  requestAnimationFrame(() => {
+    document.querySelector("#clients")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 }
 
 function editClient(id) {

@@ -509,6 +509,11 @@ th {
   text-transform: uppercase;
 }
 
+.row-highlight {
+  background: #ecfdf5;
+  box-shadow: inset 4px 0 0 var(--teal);
+}
+
 .client-main {
   gap: 10px;
 }
