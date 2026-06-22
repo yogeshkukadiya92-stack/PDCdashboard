@@ -605,7 +605,7 @@ function resetForm() {
 }
 
 function handleSubmit(event) {
-  event.preventDefault();
+  event?.preventDefault();
   const baseClient = {
     id: elements.clientId.value || crypto.randomUUID(),
     name: elements.clientName.value.trim(),
@@ -734,7 +734,7 @@ function markPaid(id) {
 }
 
 function addPayment(event) {
-  event.preventDefault();
+  event?.preventDefault();
   const client = clients.find((item) => item.id === selectedClientId);
   if (!client) return;
   const amount = Number(elements.paymentAmount.value || 0);
