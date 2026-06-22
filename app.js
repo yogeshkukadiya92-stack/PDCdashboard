@@ -631,6 +631,7 @@ function handleSubmit(event) {
 
   const existingIndex = clients.findIndex((item) => item.id === baseClient.id);
   let savedClient;
+  let successMessage = "";
   if (existingIndex >= 0) {
     const existing = clients[existingIndex];
     const diff = baseClient.receivedAmount - receivedFor(existing);
@@ -658,21 +659,22 @@ function handleSubmit(event) {
     clients[existingIndex] = client;
     savedClient = client;
     selectedClientId = client.id;
+    successMessage = `${client.name} updated successfully. Check Client Records below.`;
     showToast("Client record updated.");
-    setFormStatus(`${client.name} updated successfully.`);
   } else {
     const client = normalizeClient(baseClient);
     clients.push(client);
     savedClient = client;
     selectedClientId = client.id;
+    successMessage = `${client.name} saved successfully. Check Client Records below.`;
     showToast("New client added with monthly PDC schedule.");
-    setFormStatus(`${client.name} saved successfully.`);
   }
 
   saveClients();
   syncClientToSheet(savedClient, existingIndex >= 0 ? "client_updated" : "client_created");
   render();
   resetForm();
+  setFormStatus(successMessage);
 }
 
 function editClient(id) {
