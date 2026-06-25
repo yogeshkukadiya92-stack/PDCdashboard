@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PDC Client Dashboard</title>
-    <link rel="stylesheet" href="./styles.css?v=20260625-7" />
+    <link rel="stylesheet" href="./styles.css?v=20260625-8" />
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   </head>
   <body>
@@ -74,6 +74,10 @@
             <button class="ghost-button" id="saveSheetUrlButton" type="button" onclick="event.stopImmediatePropagation(); saveSheetUrl(); return false;">
               <i data-lucide="link"></i>
               Save URL
+            </button>
+            <button class="ghost-button" id="loadSheetButton" type="button" onclick="event.stopImmediatePropagation(); loadSheetClients(); return false;">
+              <i data-lucide="download"></i>
+              Load Sheet
             </button>
             <button class="primary-button" id="syncAllButton" type="button" onclick="event.stopImmediatePropagation(); syncAllToSheet(); return false;">
               <i data-lucide="refresh-cw"></i>
@@ -356,6 +360,6 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-    <script src="./app.js?v=20260625-7"></script>
+    <script src="./app.js?v=20260625-8"></script>
   </body>
 </html>

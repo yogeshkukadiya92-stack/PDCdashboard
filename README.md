@@ -40,3 +40,4 @@ Browser notifications work when the dashboard is open and notification permissio
 10. Paste that URL in the dashboard's `Google Sheet` settings and click `Save URL`.
 
 After this, saving a client, updating payments, editing meetings, and using `Sync All` will write rows to the Google Sheet automatically.
+Use `Load Sheet` to pull the latest Google Sheet records back into the dashboard and merge them into the current view.

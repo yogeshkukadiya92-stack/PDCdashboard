@@ -952,6 +952,7 @@ function saveSheetUrl() {
   localStorage.setItem(sheetUrlStorageKey, url);
   renderSyncStatus();
   showToast(url ? "Google Sheet URL saved." : "Google Sheet URL removed.");
+  if (url) loadSheetClients({ silent: true });
 }
 
 function sheetPayload(client, eventType, extra = {}) {
@@ -959,6 +960,12 @@ function sheetPayload(client, eventType, extra = {}) {
   return {
     eventType,
     syncedAt: new Date().toISOString(),
+    clientSnapshot: {
+      ...client,
+      receivedAmount: receivedFor(client),
+      pendingAmount: pendingFor(client),
+      updatedAt: new Date().toISOString()
+    },
     client: {
       id: client.id,
       name: client.name,
@@ -996,6 +1003,42 @@ async function syncClientToSheet(client, eventType, extra = {}) {
     elements.syncStatus.textContent = "Sync failed";
     elements.syncStatus.className = "badge danger";
     showToast("Google Sheet sync failed. Please verify the URL and deployment.");
+    return false;
+  }
+}
+
+async function loadSheetClients({ silent = false } = {}) {
+  const url = getSheetUrl();
+  if (!url) return false;
+
+  try {
+    const exportUrl = new URL(url);
+    exportUrl.searchParams.set("action", "clients");
+
+    const response = await fetch(exportUrl.toString(), { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const payload = await response.json();
+    const remoteClients = Array.isArray(payload.clients) ? payload.clients : [];
+    if (remoteClients.length === 0) {
+      if (!silent) showToast("No clients were found in Google Sheet.");
+      return false;
+    }
+
+    clients = remoteClients.map(normalizeClient);
+    const keepSelected = clients.some((client) => client.id === selectedClientId);
+    selectedClientId = keepSelected ? selectedClientId : clients[0]?.id || "";
+    lastSavedClientId = "";
+    saveClients();
+    render();
+    if (!silent) showToast(`Loaded ${clients.length} clients from Google Sheet.`);
+    return true;
+  } catch {
+    if (!silent) {
+      elements.syncStatus.textContent = "Sync failed";
+      elements.syncStatus.className = "badge danger";
+      showToast("Google Sheet import failed. Please verify the URL and deployment.");
+    }
     return false;
   }
 }
@@ -1130,6 +1173,7 @@ function bindEvents() {
   document.querySelector("#exportButton").addEventListener("click", exportData);
   document.querySelector("#importFile").addEventListener("change", importData);
   document.querySelector("#saveSheetUrlButton").addEventListener("click", saveSheetUrl);
+  document.querySelector("#loadSheetButton").addEventListener("click", loadSheetClients);
   document.querySelector("#syncAllButton").addEventListener("click", syncAllToSheet);
   document.querySelector("#notifyButton").addEventListener("click", enableNotifications);
   document.querySelector("#printButton").addEventListener("click", () => window.print());
@@ -1163,6 +1207,7 @@ Object.assign(window, {
   print: window.print.bind(window),
   resetForm,
   saveSheetUrl,
+  loadSheetClients,
   switchView,
   syncAllToSheet
 });
@@ -1171,3 +1216,4 @@ bindEvents();
 resetForm();
 switchView(window.location.hash.replace("#", "") || "view-overview");
 render();
+if (getSheetUrl()) loadSheetClients({ silent: true });
