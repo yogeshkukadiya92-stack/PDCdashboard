@@ -100,6 +100,7 @@ const elements = {
   sheetWebAppUrl: document.querySelector("#sheetWebAppUrl"),
   syncStatus: document.querySelector("#syncStatus"),
   formStatus: document.querySelector("#formStatus"),
+  saveProof: document.querySelector("#saveProof"),
   toast: document.querySelector("#toast")
 };
 
@@ -328,6 +329,21 @@ function setFormStatus(message) {
   }
 }
 
+function setSaveProof(client, actionLabel) {
+  if (!elements.saveProof || !client) return;
+  elements.saveProof.hidden = false;
+  elements.saveProof.innerHTML = `
+    <strong>${escapeHtml(actionLabel)}</strong>
+    <span>${escapeHtml(client.name)} · ${escapeHtml(client.phone)} · Pending ${formatCurrency(pendingFor(client))}</span>
+  `;
+}
+
+function clearSaveProof() {
+  if (!elements.saveProof) return;
+  elements.saveProof.hidden = true;
+  elements.saveProof.innerHTML = "";
+}
+
 function filteredClients() {
   const query = elements.searchInput.value.trim().toLowerCase();
   const status = elements.statusFilter.value;
@@ -337,7 +353,11 @@ function filteredClients() {
       const haystack = `${client.name} ${client.phone} ${client.status} ${client.paymentMode} ${client.followUpDate}`.toLowerCase();
       return haystack.includes(query);
     })
-    .sort((a, b) => new Date(`${a.meetingDate}T00:00:00`) - new Date(`${b.meetingDate}T00:00:00`));
+    .sort((a, b) => {
+      if (a.id === lastSavedClientId) return -1;
+      if (b.id === lastSavedClientId) return 1;
+      return new Date(`${a.meetingDate}T00:00:00`) - new Date(`${b.meetingDate}T00:00:00`);
+    });
 }
 
 function renderMetrics() {
@@ -589,7 +609,7 @@ function renderPayments() {
       .join("") || `<div class="empty-state">All visible payments are fully received.</div>`;
 }
 
-function resetForm() {
+function resetForm({ clearProof = true } = {}) {
   elements.clientForm.reset();
   elements.clientId.value = "";
   elements.planMonths.value = 3;
@@ -603,6 +623,7 @@ function resetForm() {
   elements.paymentDate.value = today;
   elements.clientName.focus();
   setFormStatus("Ready to save client details.");
+  if (clearProof) clearSaveProof();
 }
 
 function handleSubmit(event) {
@@ -627,6 +648,7 @@ function handleSubmit(event) {
   if (!baseClient.name || !baseClient.phone) {
     showToast("Client name aur mobile number required hai.");
     setFormStatus("Save blocked: client name and mobile number are required.");
+    clearSaveProof();
     (baseClient.name ? elements.phone : elements.clientName).focus();
     return;
   }
@@ -634,6 +656,7 @@ function handleSubmit(event) {
   if (baseClient.receivedAmount > baseClient.serviceAmount) {
     showToast("Received payment service amount se zyada nahi ho sakta.");
     setFormStatus("Save blocked: received amount cannot exceed service amount.");
+    clearSaveProof();
     return;
   }
 
@@ -683,8 +706,9 @@ function handleSubmit(event) {
   saveClients();
   syncClientToSheet(savedClient, existingIndex >= 0 ? "client_updated" : "client_created");
   render();
-  resetForm();
+  resetForm({ clearProof: false });
   setFormStatus(successMessage);
+  setSaveProof(savedClient, existingIndex >= 0 ? "Client updated" : "Client saved");
   requestAnimationFrame(() => {
     document.querySelector("#clients")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
@@ -892,6 +916,32 @@ function handleAction(event) {
   if (action === "payment-delete") deletePayment(id, paymentId);
 }
 
+function handleGlobalButtonClick(event) {
+  const target = event.target.closest("button, a");
+  if (!target) return;
+
+  if (target.id === "saveClientButton") {
+    event.preventDefault();
+    event.stopPropagation();
+    handleSubmit(event);
+    return;
+  }
+
+  if (target.id === "addPaymentButton") {
+    event.preventDefault();
+    event.stopPropagation();
+    addPayment(event);
+    return;
+  }
+
+  if (target.dataset.action) {
+    event.preventDefault();
+    event.stopPropagation();
+    handleAction(event);
+    return;
+  }
+}
+
 function getSheetUrl() {
   return localStorage.getItem(sheetUrlStorageKey) || "";
 }
@@ -1061,6 +1111,7 @@ function switchView(viewId) {
 }
 
 function bindEvents() {
+  document.addEventListener("click", handleGlobalButtonClick, true);
   const navLinks = document.querySelectorAll(".nav-links a");
   navLinks.forEach((link) => {
     link.addEventListener("click", (e) => {
@@ -1103,6 +1154,19 @@ function bindEvents() {
     switchView(window.location.hash.replace("#", "") || "view-overview");
   });
 }
+
+Object.assign(window, {
+  addPayment,
+  enableNotifications,
+  exportData,
+  handleAction,
+  handleSubmit,
+  print: window.print.bind(window),
+  resetForm,
+  saveSheetUrl,
+  switchView,
+  syncAllToSheet
+});
 
 bindEvents();
 resetForm();

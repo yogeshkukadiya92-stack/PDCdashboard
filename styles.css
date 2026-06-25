@@ -685,6 +685,25 @@ tbody tr:hover {
   line-height: 1.45;
 }
 
+.save-proof {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(13, 131, 119, 0.28);
+  border-radius: var(--radius);
+  background: #ecfdf5;
+  color: #114d44;
+  padding: 11px 12px;
+  font-size: 13px;
+}
+
+.save-proof[hidden] {
+  display: none;
+}
+
+.save-proof strong {
+  font-size: 14px;
+}
+
 .detail-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
