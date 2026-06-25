@@ -822,14 +822,6 @@ function updateMeeting(clientId, meetingId, status) {
   const meeting = client?.meetings.find((item) => item.id === meetingId);
   if (!client || !meeting) return;
   meeting.status = status;
-  if (status === "Done") {
-    const weight = prompt("Current weight (kg), optional:", meeting.weight || "");
-    const goal = prompt("Next goal, optional:", meeting.goal || "");
-    const notes = prompt("Meeting notes, optional:", meeting.notes || "");
-    meeting.weight = weight ?? meeting.weight;
-    meeting.goal = goal ?? meeting.goal;
-    meeting.notes = notes ?? meeting.notes;
-  }
   saveClients();
   syncClientToSheet(client, "meeting_updated", { meetingId, status });
   render();
