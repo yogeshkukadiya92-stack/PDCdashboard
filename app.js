@@ -631,7 +631,7 @@ function resetForm({ clearProof = true } = {}) {
   if (clearProof) clearSaveProof();
 }
 
-function handleSubmit(event) {
+async function handleSubmit(event) {
   event?.preventDefault();
   const baseClient = {
     id: elements.clientId.value || createId(),
@@ -709,10 +709,10 @@ function handleSubmit(event) {
   }
 
   saveClients();
-  syncClientToSheet(savedClient, existingIndex >= 0 ? "client_updated" : "client_created");
+  const syncOk = await syncClientToSheet(savedClient, existingIndex >= 0 ? "client_updated" : "client_created");
   render();
   resetForm({ clearProof: false });
-  setFormStatus(successMessage);
+  setFormStatus(syncOk ? `${successMessage} Google Sheet synced.` : successMessage);
   setSaveProof(savedClient, existingIndex >= 0 ? "Client updated" : "Client saved");
   requestAnimationFrame(() => {
     document.querySelector("#clients")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -989,7 +989,7 @@ function sheetPayload(client, eventType, extra = {}) {
 
 async function syncClientToSheet(client, eventType, extra = {}) {
   const url = getSheetUrl();
-  if (!url || !client) return;
+  if (!url || !client) return false;
   try {
     await fetch(url, {
       method: "POST",
@@ -999,10 +999,12 @@ async function syncClientToSheet(client, eventType, extra = {}) {
     });
     elements.syncStatus.textContent = "Synced";
     elements.syncStatus.className = "badge success";
+    return true;
   } catch {
     elements.syncStatus.textContent = "Sync failed";
     elements.syncStatus.className = "badge danger";
     showToast("Google Sheet sync failed. Please verify the URL and deployment.");
+    return false;
   }
 }
 

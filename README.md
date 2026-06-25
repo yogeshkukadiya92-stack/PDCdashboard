@@ -28,14 +28,15 @@ Browser notifications work when the dashboard is open and notification permissio
 
 ## Google Sheet Sync Setup
 
-1. Create/open a Google Sheet.
+1. Create or open the Google Sheet you want to sync into.
 2. Go to `Extensions` > `Apps Script`.
 3. Paste the code from `google-apps-script.gs`.
-4. Click `Deploy` > `New deployment`.
-5. Select type `Web app`.
-6. Set `Execute as` to `Me`.
-7. Set `Who has access` to `Anyone`.
-8. Deploy and copy the Web App URL.
-9. Paste that URL in the dashboard's `Google Sheet` settings and click `Save URL`.
+4. If the script is not bound to the sheet, set `SPREADSHEET_ID` in `Project Settings` > `Script properties`.
+5. Click `Deploy` > `New deployment`.
+6. Select type `Web app`.
+7. Set `Execute as` to `Me`.
+8. Set `Who has access` to `Anyone`.
+9. Deploy and copy the Web App URL.
+10. Paste that URL in the dashboard's `Google Sheet` settings and click `Save URL`.
 
-After this, client saves, payment updates, meeting updates, and manual `Sync All` send rows to the sheet automatically.
+After this, saving a client, updating payments, editing meetings, and using `Sync All` will write rows to the Google Sheet automatically.

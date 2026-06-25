@@ -39,7 +39,7 @@ function doPost(e) {
 }
 
 function getDashboardSheet_() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const spreadsheet = getSpreadsheet_();
   let sheet = spreadsheet.getSheetByName(SHEET_NAME);
   if (!sheet) sheet = spreadsheet.insertSheet(SHEET_NAME);
 
@@ -68,4 +68,14 @@ function getDashboardSheet_() {
   }
 
   return sheet;
+}
+
+function getSpreadsheet_() {
+  const active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return active;
+
+  const spreadsheetId = PropertiesService.getScriptProperties().getProperty("SPREADSHEET_ID");
+  if (spreadsheetId) return SpreadsheetApp.openById(spreadsheetId);
+
+  throw new Error("No spreadsheet found. Bind this script to a Google Sheet or set SPREADSHEET_ID in Script Properties.");
 }
