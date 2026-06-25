@@ -1,5 +1,6 @@
 const storageKey = "pdc-dashboard-clients-v7";
 const sheetUrlStorageKey = "pdc-dashboard-sheet-web-app-url";
+const seedVersionStorageKey = "pdc-dashboard-seed-version";
 const legacyStorageKeys = [];
 const renewalReminderWindowDays = 20;
 
@@ -60,6 +61,7 @@ const fallbackSeedClients = [
 ];
 
 const importedSeedClients = Array.isArray(window.__PDC_IMPORTED_CLIENTS__) ? window.__PDC_IMPORTED_CLIENTS__ : [];
+const importedSeedVersion = window.__PDC_IMPORTED_CLIENTS_VERSION__ || "";
 const seedClients = importedSeedClients.length > 0 ? importedSeedClients : fallbackSeedClients;
 
 let clients = loadClients();
@@ -114,6 +116,7 @@ const elements = {
 
 function loadClients() {
   const saved = localStorage.getItem(storageKey) || legacyStorageKeys.map((key) => localStorage.getItem(key)).find(Boolean);
+  const savedSeedVersion = localStorage.getItem(seedVersionStorageKey) || "";
   let loadedClients = seedClients;
   if (saved) {
     try {
@@ -122,11 +125,12 @@ function loadClients() {
       legacyStorageKeys.concat(storageKey).forEach((key) => localStorage.removeItem(key));
     }
   }
-  if (saved && importedSeedClients.length > 0) {
-    loadedClients = mergeClientLists(loadedClients, importedSeedClients);
+  if (importedSeedClients.length > 0 && savedSeedVersion !== importedSeedVersion) {
+    loadedClients = importedSeedClients;
   }
   const normalized = loadedClients.map(normalizeClient);
   localStorage.setItem(storageKey, JSON.stringify(normalized));
+  if (importedSeedVersion) localStorage.setItem(seedVersionStorageKey, importedSeedVersion);
   return normalized;
 }
 
@@ -147,6 +151,7 @@ function mergeClientLists(existingClients, incomingClients) {
 function saveClients() {
   clients = clients.map(normalizeClient);
   localStorage.setItem(storageKey, JSON.stringify(clients));
+  if (importedSeedVersion) localStorage.setItem(seedVersionStorageKey, importedSeedVersion);
 }
 
 function normalizeClient(client) {
