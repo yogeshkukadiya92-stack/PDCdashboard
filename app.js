@@ -8,7 +8,7 @@ function createId() {
   return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-const seedClients = [
+const fallbackSeedClients = [
   {
     id: createId(),
     name: "Riya Sharma",
@@ -58,6 +58,9 @@ const seedClients = [
     createdAt: new Date().toISOString()
   }
 ];
+
+const importedSeedClients = Array.isArray(window.__PDC_IMPORTED_CLIENTS__) ? window.__PDC_IMPORTED_CLIENTS__ : [];
+const seedClients = importedSeedClients.length > 0 ? importedSeedClients : fallbackSeedClients;
 
 let clients = loadClients();
 let selectedClientId = clients[0]?.id || "";
@@ -119,9 +122,26 @@ function loadClients() {
       legacyStorageKeys.concat(storageKey).forEach((key) => localStorage.removeItem(key));
     }
   }
+  if (saved && importedSeedClients.length > 0) {
+    loadedClients = mergeClientLists(loadedClients, importedSeedClients);
+  }
   const normalized = loadedClients.map(normalizeClient);
   localStorage.setItem(storageKey, JSON.stringify(normalized));
   return normalized;
+}
+
+function mergeClientLists(existingClients, incomingClients) {
+  const byIdentity = new Map();
+  const identityFor = (client) => {
+    const phone = String(client.phone || "").replace(/\D/g, "");
+    return phone || `${String(client.name || "").trim().toLowerCase()}|${String(client.startDate || "").trim()}`;
+  };
+
+  [...existingClients, ...incomingClients].forEach((client) => {
+    byIdentity.set(identityFor(client), client);
+  });
+
+  return Array.from(byIdentity.values());
 }
 
 function saveClients() {
