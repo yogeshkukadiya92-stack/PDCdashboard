@@ -651,7 +651,7 @@ function handleSubmit(event) {
   };
 
   if (!baseClient.name || !baseClient.phone) {
-    showToast("Client name aur mobile number required hai.");
+    showToast("Client name and mobile number are required.");
     setFormStatus("Save blocked: client name and mobile number are required.");
     clearSaveProof();
     (baseClient.name ? elements.phone : elements.clientName).focus();
@@ -659,7 +659,7 @@ function handleSubmit(event) {
   }
 
   if (baseClient.receivedAmount > baseClient.serviceAmount) {
-    showToast("Received payment service amount se zyada nahi ho sakta.");
+    showToast("Received amount cannot exceed the service amount.");
     setFormStatus("Save blocked: received amount cannot exceed service amount.");
     clearSaveProof();
     return;
@@ -743,7 +743,7 @@ function editClient(id) {
 function deleteClient(id) {
   const client = clients.find((item) => item.id === id);
   if (!client) return;
-  const confirmed = confirm(`${client.name} ka record delete karna hai?`);
+  const confirmed = confirm(`Delete ${client.name}'s record?`);
   if (!confirmed) return;
   clients = clients.filter((item) => item.id !== id);
   saveClients();
@@ -757,7 +757,7 @@ function markPaid(id) {
   if (!client) return;
   const pending = pendingFor(client);
   if (pending <= 0) {
-    showToast("Payment already fully received.");
+    showToast("This client is already fully paid.");
     setFormStatus("No payment added because the client is already fully paid.");
     return;
   }
@@ -781,12 +781,12 @@ function addPayment(event) {
   if (!client) return;
   const amount = Number(elements.paymentAmount.value || 0);
   if (amount <= 0) {
-    showToast("Installment amount valid hona chahiye.");
+    showToast("Installment amount must be greater than zero.");
     setFormStatus("Installment amount must be greater than zero.");
     return;
   }
   if (amount > pendingFor(client)) {
-    showToast("Installment pending amount se zyada nahi ho sakta.");
+    showToast("Installment amount cannot exceed the pending balance.");
     setFormStatus("Installment cannot exceed the pending amount.");
     return;
   }
@@ -802,7 +802,7 @@ function addPayment(event) {
   elements.paymentForm.reset();
   elements.paymentDate.value = toDateValue(new Date());
   render();
-  showToast("Payment installment added.");
+  showToast("Payment installment added successfully.");
   setFormStatus(`${formatCurrency(amount)} installment added for ${client.name}.`);
 }
 
@@ -813,7 +813,7 @@ function deletePayment(clientId, paymentId) {
   saveClients();
   syncClientToSheet(client, "payment_deleted", { paymentId });
   render();
-  showToast("Payment installment deleted.");
+  showToast("Payment installment deleted successfully.");
   setFormStatus("Payment installment deleted.");
 }
 
@@ -833,8 +833,8 @@ function updateMeeting(clientId, meetingId, status) {
   saveClients();
   syncClientToSheet(client, "meeting_updated", { meetingId, status });
   render();
-  showToast(`Meeting marked ${status}.`);
-  setFormStatus(`Meeting updated to ${status}.`);
+  showToast(`Meeting marked as ${status.toLowerCase()}.`);
+  setFormStatus(`Meeting updated to ${status.toLowerCase()}.`);
 }
 
 function editMeetingNote(clientId, meetingId) {
@@ -847,30 +847,30 @@ function editMeetingNote(clientId, meetingId) {
   saveClients();
   syncClientToSheet(client, "meeting_note_saved", { meetingId });
   render();
-  showToast("Meeting note saved.");
-  setFormStatus("Meeting note saved.");
+  showToast("Meeting note saved successfully.");
+  setFormStatus("Meeting note saved successfully.");
 }
 
 function reminderMessage(client) {
   const next = nextMeetingFor(client);
   const pending = pendingFor(client);
-  return `Namaste ${client.name}, aapki PDC meeting ${formatDate(next?.date)} ko scheduled hai. Pending payment: ${formatCurrency(pending)}. Kripya time confirm karein. - PDC Team`;
+  return `Hello ${client.name}, your PDC meeting is scheduled for ${formatDate(next?.date)}. Pending payment: ${formatCurrency(pending)}. Please confirm your availability. - PDC Team`;
 }
 
 function renewalMessage(client) {
-  return `Namaste ${client.name}, aapka PDC plan ${formatDate(client.endDate)} ko complete ho raha hai. Continuity ke liye renewal plan confirm kar dein. Pending payment: ${formatCurrency(pendingFor(client))}. - PDC Team`;
+  return `Hello ${client.name}, your PDC plan is scheduled to end on ${formatDate(client.endDate)}. Please confirm your renewal plan to continue without interruption. Pending payment: ${formatCurrency(pendingFor(client))}. - PDC Team`;
 }
 
 function followUpMessage(client) {
-  return `Namaste ${client.name}, aapne PDC plan me interest dikhaya tha. Aaj follow-up ke liye connect kar rahe hain. Kya aap plan details confirm karna chahenge? - PDC Team`;
+  return `Hello ${client.name}, you previously expressed interest in the PDC plan. We are following up today to see whether you would like to confirm the plan details. - PDC Team`;
 }
 
 async function sendWhatsApp(client, message) {
   try {
     await navigator.clipboard.writeText(message);
-    showToast("Message copied. WhatsApp open ho raha hai.");
+    showToast("Message copied. Opening WhatsApp.");
   } catch {
-    showToast("Message ready. WhatsApp open ho raha hai.");
+    showToast("Message ready. Opening WhatsApp.");
   }
   const digits = client.phone.replace(/\D/g, "");
   const phone = digits.length === 10 ? `91${digits}` : digits;
@@ -954,7 +954,7 @@ function getSheetUrl() {
 function saveSheetUrl() {
   const url = elements.sheetWebAppUrl.value.trim();
   if (url && !url.startsWith("https://script.google.com/")) {
-    showToast("Google Apps Script Web App URL https://script.google.com/ se start hona chahiye.");
+    showToast("The Google Apps Script Web App URL must start with https://script.google.com/.");
     return;
   }
   localStorage.setItem(sheetUrlStorageKey, url);
@@ -1002,14 +1002,14 @@ async function syncClientToSheet(client, eventType, extra = {}) {
   } catch {
     elements.syncStatus.textContent = "Sync failed";
     elements.syncStatus.className = "badge danger";
-    showToast("Google Sheet sync failed. URL/deployment check karein.");
+    showToast("Google Sheet sync failed. Please verify the URL and deployment.");
   }
 }
 
 async function syncAllToSheet() {
   const url = getSheetUrl();
   if (!url) {
-    showToast("Pehle Google Apps Script Web App URL save karein.");
+    showToast("Please save the Google Apps Script Web App URL first.");
     return;
   }
   for (const client of clients) {
@@ -1040,9 +1040,9 @@ function importData(event) {
       selectedClientId = clients[0]?.id || "";
       saveClients();
       render();
-      showToast("Imported data loaded successfully.");
+      showToast("Data imported successfully.");
     } catch {
-      showToast("Import file valid JSON backup nahi hai.");
+      showToast("The import file is not a valid JSON backup.");
     }
   };
   reader.readAsText(file);
@@ -1051,12 +1051,12 @@ function importData(event) {
 
 async function enableNotifications() {
   if (!("Notification" in window)) {
-    showToast("Is browser me notifications supported nahi hain.");
+    showToast("Notifications are not supported in this browser.");
     return;
   }
   const permission = await Notification.requestPermission();
   if (permission !== "granted") {
-    showToast("Notification permission allow nahi hui.");
+    showToast("Notification permission was not granted.");
     return;
   }
 
