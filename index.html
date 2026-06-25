@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PDC Client Dashboard</title>
-    <link rel="stylesheet" href="./styles.css?v=20260622-6" />
+    <link rel="stylesheet" href="./styles.css?v=20260625-1" />
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   </head>
   <body>
@@ -135,7 +135,7 @@
             </button>
           </div>
 
-          <form id="clientForm" class="client-form">
+          <form id="clientForm" class="client-form" novalidate>
             <input type="hidden" id="clientId" />
 
             <label>
@@ -211,7 +211,7 @@
               <textarea id="notes" rows="3" placeholder="Diet focus, special condition, follow-up points"></textarea>
             </label>
 
-            <button class="primary-button full" type="submit" onclick="event.stopImmediatePropagation(); handleSubmit(event); return false;">
+            <button class="primary-button full" type="button" onclick="event.stopImmediatePropagation(); handleSubmit(event); return false;">
               <i data-lucide="save"></i>
               Save Client
             </button>
@@ -291,7 +291,7 @@
               <span class="badge" id="installmentTotal">₹0</span>
             </div>
 
-            <form id="paymentForm" class="payment-form">
+            <form id="paymentForm" class="payment-form" novalidate>
               <div class="field-row">
                 <label>
                   Date
@@ -317,7 +317,7 @@
                   <input id="paymentNote" placeholder="Receipt / reference" />
                 </label>
               </div>
-              <button class="primary-button full" type="submit" onclick="event.stopImmediatePropagation(); addPayment(event); return false;">
+              <button class="primary-button full" type="button" onclick="event.stopImmediatePropagation(); addPayment(event); return false;">
                 <i data-lucide="plus"></i>
                 Add Installment
               </button>
@@ -355,6 +355,6 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-    <script src="./app.js?v=20260622-6"></script>
+    <script src="./app.js?v=20260625-1"></script>
   </body>
 </html>
