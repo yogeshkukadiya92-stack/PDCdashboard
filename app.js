@@ -3,9 +3,14 @@ const sheetUrlStorageKey = "pdc-dashboard-sheet-web-app-url";
 const legacyStorageKeys = [];
 const renewalReminderWindowDays = 20;
 
+function createId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 const seedClients = [
   {
-    id: crypto.randomUUID(),
+    id: createId(),
     name: "Riya Sharma",
     phone: "9876543210",
     planMonths: 3,
@@ -21,7 +26,7 @@ const seedClients = [
     createdAt: new Date().toISOString()
   },
   {
-    id: crypto.randomUUID(),
+    id: createId(),
     name: "Amit Patel",
     phone: "9123456780",
     planMonths: 6,
@@ -37,7 +42,7 @@ const seedClients = [
     createdAt: new Date().toISOString()
   },
   {
-    id: crypto.randomUUID(),
+    id: createId(),
     name: "Neha Verma",
     phone: "9988776655",
     planMonths: 1,
@@ -127,7 +132,7 @@ function saveClients() {
 function normalizeClient(client) {
   const normalized = {
     ...client,
-    id: client.id || crypto.randomUUID(),
+    id: client.id || createId(),
     planMonths: Number(client.planMonths || 1),
     serviceAmount: Number(client.serviceAmount || 0),
     receivedAmount: Number(client.receivedAmount || 0),
@@ -148,7 +153,7 @@ function normalizeClient(client) {
 function normalizePayments(client) {
   if (Array.isArray(client.payments)) {
     return client.payments.map((payment) => ({
-      id: payment.id || crypto.randomUUID(),
+      id: payment.id || createId(),
       date: payment.date || client.startDate,
       amount: Number(payment.amount || 0),
       mode: payment.mode || client.paymentMode || "Online",
@@ -159,7 +164,7 @@ function normalizePayments(client) {
   if (Number(client.receivedAmount || 0) <= 0) return [];
   return [
     {
-      id: crypto.randomUUID(),
+      id: createId(),
       date: client.startDate,
       amount: Number(client.receivedAmount || 0),
       mode: client.paymentMode || "Online",
@@ -629,7 +634,7 @@ function resetForm({ clearProof = true } = {}) {
 function handleSubmit(event) {
   event?.preventDefault();
   const baseClient = {
-    id: elements.clientId.value || crypto.randomUUID(),
+    id: elements.clientId.value || createId(),
     name: elements.clientName.value.trim(),
     phone: elements.phone.value.trim(),
     planMonths: Number(elements.planMonths.value || 1),
@@ -672,7 +677,7 @@ function handleSubmit(event) {
       updatedPayments = [
         ...(existing.payments || []),
         {
-          id: crypto.randomUUID(),
+          id: createId(),
           date: toDateValue(new Date()),
           amount: diff,
           mode: baseClient.paymentMode,
@@ -757,7 +762,7 @@ function markPaid(id) {
     return;
   }
   client.payments.push({
-    id: crypto.randomUUID(),
+    id: createId(),
     date: toDateValue(new Date()),
     amount: pending,
     mode: client.paymentMode,
@@ -786,7 +791,7 @@ function addPayment(event) {
     return;
   }
   client.payments.push({
-    id: crypto.randomUUID(),
+    id: createId(),
     date: elements.paymentDate.value,
     amount,
     mode: elements.paymentEntryMode.value,
