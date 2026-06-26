@@ -463,7 +463,20 @@ textarea:focus {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
+}
+
+.bucket-actions .small {
+  min-height: 30px;
+  padding: 0 9px;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bucket-actions .small svg {
+  width: 14px;
+  height: 14px;
 }
 
 .reminder-item {
