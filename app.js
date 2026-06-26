@@ -3,7 +3,8 @@ const sheetUrlStorageKey = "pdc-dashboard-sheet-web-app-url";
 const seedVersionStorageKey = "pdc-dashboard-seed-version";
 const authStorageKey = "pdc-dashboard-authenticated";
 const authSessionKey = "pdc-dashboard-session-authenticated";
-const dashboardPassword = "PDC@2026";
+const dashboardEmail = "Jigneshcfl01@gmail.com";
+const dashboardPassword = "PDC@123";
 const legacyStorageKeys = [];
 const renewalReminderWindowDays = 20;
 
@@ -148,8 +149,8 @@ function handleLogin(event) {
     showToast("Please enter your username and password.");
     return;
   }
-  if (password !== dashboardPassword) {
-    showToast("Incorrect password. Please try again.");
+  if (username.toLowerCase() !== dashboardEmail.toLowerCase() || password !== dashboardPassword) {
+    showToast("Incorrect email or password. Please try again.");
     elements.loginPassword.focus();
     return;
   }
