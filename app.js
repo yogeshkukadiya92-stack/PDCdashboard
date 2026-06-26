@@ -84,6 +84,14 @@ const elements = {
   monthMeetings: document.querySelector("#monthMeetings"),
   pendingAmount: document.querySelector("#pendingAmount"),
   dueSoonCount: document.querySelector("#dueSoonCount"),
+  overviewNutritionist: document.querySelector("#overviewNutritionist"),
+  nutritionistTotalClients: document.querySelector("#nutritionistTotalClients"),
+  nutritionistActiveClients: document.querySelector("#nutritionistActiveClients"),
+  nutritionistOldClients: document.querySelector("#nutritionistOldClients"),
+  nutritionistMonthMeetings: document.querySelector("#nutritionistMonthMeetings"),
+  nutritionistClientTitle: document.querySelector("#nutritionistClientTitle"),
+  nutritionistClientList: document.querySelector("#nutritionistClientList"),
+  shareNutritionistMeetingsButton: document.querySelector("#shareNutritionistMeetingsButton"),
   clientForm: document.querySelector("#clientForm"),
   clientId: document.querySelector("#clientId"),
   clientName: document.querySelector("#clientName"),
@@ -413,11 +421,79 @@ function render() {
   renderToday();
   renderSyncStatus();
   renderMetrics();
+  renderNutritionistOverview();
   renderClients();
   renderClientBuckets();
   renderDetails();
   renderPayments();
   if (window.lucide) lucide.createIcons();
+}
+
+function isMeetingInCurrentMonth(meeting) {
+  if (!meeting?.date) return false;
+  const meetingDate = new Date(`${meeting.date}T00:00:00`);
+  const now = new Date();
+  return meetingDate.getMonth() === now.getMonth() && meetingDate.getFullYear() === now.getFullYear();
+}
+
+function selectedOverviewNutritionist() {
+  return elements.overviewNutritionist?.value || "Dr Luv Patel";
+}
+
+function clientsForNutritionist(nutritionist = selectedOverviewNutritionist()) {
+  return clients
+    .filter((client) => normalizeNutritionist(client.nutritionist) === nutritionist)
+    .sort((a, b) => {
+      const statusOrder = lifecycleFor(a).localeCompare(lifecycleFor(b));
+      if (statusOrder !== 0) return statusOrder;
+      return String(a.name).localeCompare(String(b.name));
+    });
+}
+
+function meetingsThisMonthFor(client) {
+  return (client.meetings || []).filter(isMeetingInCurrentMonth);
+}
+
+function renderNutritionistOverview() {
+  if (!elements.overviewNutritionist) return;
+  const nutritionist = selectedOverviewNutritionist();
+  const selectedClients = clientsForNutritionist(nutritionist);
+  const activeClients = selectedClients.filter((client) => lifecycleFor(client) === "active");
+  const oldClients = selectedClients.filter((client) => lifecycleFor(client) === "old");
+  const meetingClients = selectedClients.filter((client) => meetingsThisMonthFor(client).length > 0);
+
+  elements.nutritionistTotalClients.textContent = selectedClients.length;
+  elements.nutritionistActiveClients.textContent = activeClients.length;
+  elements.nutritionistOldClients.textContent = oldClients.length;
+  elements.nutritionistMonthMeetings.textContent = meetingClients.length;
+  elements.nutritionistClientTitle.textContent = `${nutritionist} Clients`;
+  elements.shareNutritionistMeetingsButton.disabled = meetingClients.length === 0;
+
+  elements.nutritionistClientList.innerHTML =
+    selectedClients
+      .map((client) => {
+        const monthMeetings = meetingsThisMonthFor(client);
+        const next = nextMeetingFor(client);
+        const meetingText = monthMeetings.length
+          ? monthMeetings.map((meeting) => formatDate(meeting.date)).join(", ")
+          : next
+            ? `Next: ${formatDate(next.date)}`
+            : "No meeting scheduled";
+        return `
+          <article class="nutritionist-client-card">
+            <div>
+              <strong>${escapeHtml(client.name)}</strong>
+              <p>${escapeHtml(client.phone || "No phone")} · ${escapeHtml(planLabel(client.planMonths))} · Pending ${formatCurrency(pendingFor(client))}</p>
+              <p>${getStatusBadge(client.status)} <span class="badge ${lifecycleFor(client) === "active" ? "success" : ""}">${lifecycleFor(client) === "active" ? "Active" : "Old"}</span> <span>${escapeHtml(meetingText)}</span></p>
+            </div>
+            <div class="row-actions">
+              <button class="ghost-button small" type="button" data-action="profile" data-id="${client.id}" onclick="event.stopImmediatePropagation(); handleAction(event); return false;"><i data-lucide="history"></i>History</button>
+              <button class="primary-button small" type="button" data-action="nutritionist-whatsapp" data-id="${client.id}" onclick="event.stopImmediatePropagation(); handleAction(event); return false;"><i data-lucide="message-circle"></i>WhatsApp</button>
+            </div>
+          </article>
+        `;
+      })
+      .join("") || `<div class="empty-state">No clients found for ${escapeHtml(nutritionist)}.</div>`;
 }
 
 function ensureSelectedClient() {
@@ -1030,6 +1106,46 @@ function reminderMessage(client) {
   return `Hello ${client.name}, your PDC meeting is scheduled for ${formatDate(next?.date)}. Pending payment: ${formatCurrency(pending)}. Please confirm your availability. - PDC Team`;
 }
 
+function nutritionistClientMessage(client) {
+  const monthMeetings = meetingsThisMonthFor(client);
+  const meetingText = monthMeetings.length ? monthMeetings.map((meeting) => formatDate(meeting.date)).join(", ") : "No meeting is scheduled for this month";
+  return [
+    `Hello ${client.name},`,
+    "",
+    "This is a professional reminder from the PDC team.",
+    `Nutritionist: ${client.nutritionist}`,
+    `Plan status: ${lifecycleFor(client) === "active" ? "Active" : "Old"}`,
+    `This month's meeting: ${meetingText}`,
+    `Pending payment: ${formatCurrency(pendingFor(client))}`,
+    "",
+    "Please confirm your availability for the scheduled consultation.",
+    "",
+    "Regards,",
+    "PDC Team"
+  ].join("\n");
+}
+
+function nutritionistMeetingGroupMessage(nutritionist = selectedOverviewNutritionist()) {
+  const selectedClients = clientsForNutritionist(nutritionist);
+  const meetingClients = selectedClients.filter((client) => meetingsThisMonthFor(client).length > 0);
+  const monthName = new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric" }).format(new Date());
+  const lines = meetingClients.map((client, index) => {
+    const dates = meetingsThisMonthFor(client).map((meeting) => formatDate(meeting.date)).join(", ");
+    return `${index + 1}. ${client.name} - ${dates} - ${lifecycleFor(client) === "active" ? "Active" : "Old"} - Pending ${formatCurrency(pendingFor(client))}`;
+  });
+  return [
+    `PDC Monthly Meeting Update - ${monthName}`,
+    `Nutritionist: ${nutritionist}`,
+    "",
+    lines.length ? lines.join("\n") : "No client meetings are scheduled for this month.",
+    "",
+    "Please review the schedule and coordinate the required follow-ups.",
+    "",
+    "Regards,",
+    "PDC Team"
+  ].join("\n");
+}
+
 function renewalMessage(client) {
   return `Hello ${client.name}, your PDC plan is scheduled to end on ${formatDate(client.endDate)}. Please confirm your renewal plan to continue without interruption. Pending payment: ${formatCurrency(pendingFor(client))}. - PDC Team`;
 }
@@ -1050,10 +1166,30 @@ async function sendWhatsApp(client, message) {
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
 }
 
+async function shareWhatsAppText(message) {
+  try {
+    await navigator.clipboard.writeText(message);
+    showToast("Message copied. Select the WhatsApp group and send it.");
+  } catch {
+    showToast("Message ready. Select the WhatsApp group and send it.");
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank", "noopener");
+}
+
 function sendReminder(id) {
   const client = clients.find((item) => item.id === id);
   if (!client) return;
   sendWhatsApp(client, reminderMessage(client));
+}
+
+function sendNutritionistWhatsApp(id) {
+  const client = clients.find((item) => item.id === id);
+  if (!client) return;
+  sendWhatsApp(client, nutritionistClientMessage(client));
+}
+
+function shareNutritionistMeetings() {
+  shareWhatsAppText(nutritionistMeetingGroupMessage());
 }
 
 function sendRenewal(id) {
@@ -1098,6 +1234,7 @@ function handleAction(event) {
   if (action === "remind") sendReminder(id);
   if (action === "renewal") sendRenewal(id);
   if (action === "followup") sendFollowUp(id);
+  if (action === "nutritionist-whatsapp") sendNutritionistWhatsApp(id);
   if (action === "shift-old") setClientLifecycle(id, "old");
   if (action === "shift-active") setClientLifecycle(id, "active");
   if (action === "meeting-done") updateMeeting(id, meetingId, "Done");
@@ -1376,6 +1513,7 @@ function bindEvents() {
   document.querySelector("#syncAllButton").addEventListener("click", syncAllToSheet);
   document.querySelector("#notifyButton").addEventListener("click", enableNotifications);
   document.querySelector("#printButton").addEventListener("click", () => window.print());
+  elements.overviewNutritionist.addEventListener("change", renderNutritionistOverview);
   elements.searchInput.addEventListener("input", renderClients);
   elements.statusFilter.addEventListener("change", renderClients);
   elements.detailClientSelect.addEventListener("change", (event) => {
@@ -1408,6 +1546,7 @@ Object.assign(window, {
   resetForm,
   saveSheetUrl,
   loadSheetClients,
+  shareNutritionistMeetings,
   switchView,
   syncAllToSheet
 });

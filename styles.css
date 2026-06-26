@@ -585,6 +585,76 @@ button svg,
   --accent: var(--rose);
 }
 
+.nutritionist-overview {
+  margin-bottom: 16px;
+}
+
+.compact-select {
+  min-width: 240px;
+}
+
+.overview-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.overview-mini-grid article {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+  padding: 14px;
+}
+
+.overview-mini-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.overview-mini-grid strong {
+  display: block;
+  margin-top: 7px;
+  font-size: 26px;
+}
+
+.nutritionist-actions {
+  margin-top: 4px;
+}
+
+.nutritionist-client-list {
+  display: grid;
+  gap: 10px;
+}
+
+.nutritionist-client-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  background: #ffffff;
+}
+
+.nutritionist-client-card strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.nutritionist-client-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.nutritionist-client-card p + p {
+  margin-top: 7px;
+}
+
 .clients-layout {
   display: grid;
   gap: 16px;
@@ -1122,6 +1192,7 @@ tbody tr:hover {
 
   .clients-layout,
   .client-buckets,
+  .overview-mini-grid,
   .payment-grid,
   .history-grid,
   .sync-row {
@@ -1171,6 +1242,7 @@ tbody tr:hover {
   .reminder-item,
   .ledger-item,
   .chart-card,
+  .nutritionist-client-card,
   .timeline-top {
     align-items: stretch;
     flex-direction: column;
@@ -1197,6 +1269,11 @@ tbody tr:hover {
 
   .bucket-actions {
     justify-content: flex-start;
+  }
+
+  .compact-select {
+    min-width: 0;
+    width: 100%;
   }
 
   .login-screen {

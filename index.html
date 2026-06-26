@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PDC Client Dashboard</title>
-    <link rel="stylesheet" href="./styles.css?v=20260626-3" />
+    <link rel="stylesheet" href="./styles.css?v=20260626-5" />
     <script src="./seed-data.js?v=20260625-2"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   </head>
@@ -157,6 +157,53 @@
             <strong id="dueSoonCount">0</strong>
             <span>Next 7 days</span>
           </article>
+        </section>
+
+        <section class="panel nutritionist-overview" aria-labelledby="nutritionistOverviewTitle">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Nutritionist overview</p>
+              <h3 id="nutritionistOverviewTitle">Client Performance by Nutritionist</h3>
+            </div>
+            <label class="compact-select">
+              Nutritionist
+              <select id="overviewNutritionist">
+                <option value="Dr Luv Patel">Dr Luv Patel</option>
+                <option value="Dt Nilesh Lakhani">Dt Nilesh Lakhani</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="overview-mini-grid" aria-label="Selected nutritionist summary">
+            <article>
+              <span>Total Clients</span>
+              <strong id="nutritionistTotalClients">0</strong>
+            </article>
+            <article>
+              <span>Active Clients</span>
+              <strong id="nutritionistActiveClients">0</strong>
+            </article>
+            <article>
+              <span>Old Clients</span>
+              <strong id="nutritionistOldClients">0</strong>
+            </article>
+            <article>
+              <span>This Month Meetings</span>
+              <strong id="nutritionistMonthMeetings">0</strong>
+            </article>
+          </div>
+
+          <div class="table-heading nutritionist-actions">
+            <div>
+              <p class="eyebrow">Client details</p>
+              <h3 id="nutritionistClientTitle">Dr Luv Patel Clients</h3>
+            </div>
+            <button class="primary-button small" id="shareNutritionistMeetingsButton" type="button" onclick="event.stopImmediatePropagation(); shareNutritionistMeetings(); return false;">
+              <i data-lucide="message-circle"></i>
+              Share Monthly Meeting List
+            </button>
+          </div>
+          <div class="nutritionist-client-list" id="nutritionistClientList"></div>
         </section>
       </div>
 
@@ -424,6 +471,6 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-    <script src="./app.js?v=20260626-2"></script>
+    <script src="./app.js?v=20260626-5"></script>
   </body>
 </html>
