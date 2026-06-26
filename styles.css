@@ -429,6 +429,43 @@ textarea:focus {
   gap: 10px;
 }
 
+.client-buckets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.client-bucket {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.bucket-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 2px;
+}
+
+.bucket-heading h4 {
+  margin: 2px 0 0;
+  font-size: 16px;
+}
+
+.client-bucket-item {
+  align-items: flex-start;
+}
+
+.bucket-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .reminder-item {
   gap: 12px;
   justify-content: space-between;
@@ -841,6 +878,7 @@ tbody tr:hover {
   }
 
   .clients-layout,
+  .client-buckets,
   .payment-grid,
   .history-grid,
   .sync-row {
@@ -912,6 +950,10 @@ tbody tr:hover {
 
   .detail-summary {
     grid-template-columns: 1fr;
+  }
+
+  .bucket-actions {
+    justify-content: flex-start;
   }
 }
 

@@ -169,6 +169,7 @@ function normalizeClient(client) {
     serviceAmount: Number(client.serviceAmount || 0),
     receivedAmount: Number(client.receivedAmount || 0),
     nutritionist: normalizeNutritionist(client.nutritionist || client.leader),
+    lifecycle: client.lifecycle || (client.endDate && dateDiffInDays(client.endDate) < 0 ? "old" : "active"),
     paymentMode: client.paymentMode || "Online",
     status: client.status || "Active",
     followUpDate: client.followUpDate || "",
@@ -290,6 +291,19 @@ function pendingFor(client) {
   return Math.max(Number(client.serviceAmount || 0) - receivedFor(client), 0);
 }
 
+function isPlanExpired(client) {
+  return Boolean(client.endDate) && dateDiffInDays(client.endDate) < 0;
+}
+
+function lifecycleFor(client) {
+  return client.lifecycle || (isPlanExpired(client) ? "old" : "active");
+}
+
+function planLabel(months) {
+  const count = Number(months || 1);
+  return count === 1 ? "One Time" : `${count} Month`;
+}
+
 function nextMeetingFor(client) {
   const pending = (client.meetings || [])
     .filter((meeting) => meeting.status === "Pending")
@@ -333,7 +347,7 @@ function render() {
   renderSyncStatus();
   renderMetrics();
   renderClients();
-  renderReminders();
+  renderClientBuckets();
   renderDetails();
   renderPayments();
   if (window.lucide) lucide.createIcons();
@@ -399,7 +413,7 @@ function filteredClients() {
 }
 
 function renderMetrics() {
-  const activeClients = clients.filter((client) => client.status === "Active");
+  const activeClients = clients.filter((client) => lifecycleFor(client) === "active");
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   const monthMeetings = activeClients.reduce((count, client) => {
@@ -454,7 +468,7 @@ function renderClients() {
             </div>
           </td>
           <td>${escapeHtml(client.nutritionist)}</td>
-          <td>${client.planMonths} month<br><span class="muted">${formatDate(client.startDate)} - ${formatDate(client.endDate)}</span></td>
+          <td>${planLabel(client.planMonths)}<br><span class="muted">${formatDate(client.startDate)} - ${formatDate(client.endDate)}</span></td>
           <td>${formatDate(next?.date)}<br>${getMeetingBadge(days)}</td>
           <td>${client.followUpDate ? `${formatDate(client.followUpDate)}<br>${getMeetingBadge(dateDiffInDays(client.followUpDate))}` : `<span class="muted">-</span>`}</td>
           <td>${formatCurrency(client.serviceAmount)}</td>
@@ -543,6 +557,68 @@ function renderReminders() {
         `;
       })
       .join("") || `<div class="empty-state">No urgent meetings, renewals, or follow-ups. Alerts appear before meeting date, plan end date, and interested-client follow-up date.</div>`;
+}
+
+function renderClientBuckets() {
+  const sortedClients = clients
+    .slice()
+    .sort((a, b) => new Date(`${a.endDate || a.startDate}T00:00:00`) - new Date(`${b.endDate || b.startDate}T00:00:00`));
+  const activeClients = sortedClients.filter((client) => lifecycleFor(client) === "active");
+  const oldClients = sortedClients.filter((client) => lifecycleFor(client) === "old");
+
+  const renderBucketItem = (client, targetLifecycle) => {
+    const days = renewalDaysFor(client);
+    const expired = isPlanExpired(client);
+    const badge = expired ? `<span class="badge danger">Expired</span>` : getMeetingBadge(days);
+    const action = targetLifecycle === "old" ? "shift-old" : "shift-active";
+    const buttonLabel = targetLifecycle === "old" ? "Move to Old" : "Move to Active";
+    const icon = targetLifecycle === "old" ? "archive" : "rotate-ccw";
+
+    return `
+      <article class="reminder-item client-bucket-item">
+        <div>
+          <strong>${escapeHtml(client.name)} ${badge}</strong>
+          <p>${escapeHtml(client.nutritionist)} · ${planLabel(client.planMonths)} · End: ${formatDate(client.endDate)} · Pending: ${formatCurrency(pendingFor(client))}</p>
+        </div>
+        <div class="bucket-actions">
+          <button class="ghost-button small" type="button" data-action="profile" data-id="${client.id}" onclick="event.stopImmediatePropagation(); handleAction(event); return false;">
+            <i data-lucide="history"></i>
+            History
+          </button>
+          <button class="primary-button small" type="button" data-action="${action}" data-id="${client.id}" onclick="event.stopImmediatePropagation(); handleAction(event); return false;">
+            <i data-lucide="${icon}"></i>
+            ${buttonLabel}
+          </button>
+        </div>
+      </article>
+    `;
+  };
+
+  elements.reminderList.innerHTML = `
+    <div class="client-buckets">
+      <section class="client-bucket">
+        <div class="bucket-heading">
+          <div>
+            <p class="eyebrow">Running plans</p>
+            <h4>Active Clients</h4>
+          </div>
+          <span class="badge success">${activeClients.length}</span>
+        </div>
+        ${activeClients.map((client) => renderBucketItem(client, "old")).join("") || `<div class="empty-state">No active clients found.</div>`}
+      </section>
+
+      <section class="client-bucket">
+        <div class="bucket-heading">
+          <div>
+            <p class="eyebrow">Expired plans</p>
+            <h4>Old Clients</h4>
+          </div>
+          <span class="badge warning">${oldClients.length}</span>
+        </div>
+        ${oldClients.map((client) => renderBucketItem(client, "active")).join("") || `<div class="empty-state">No old clients found.</div>`}
+      </section>
+    </div>
+  `;
 }
 
 function renderDetails() {
@@ -925,6 +1001,17 @@ function sendFollowUp(id) {
   sendWhatsApp(client, followUpMessage(client));
 }
 
+function setClientLifecycle(id, lifecycle) {
+  const client = clients.find((item) => item.id === id);
+  if (!client) return;
+  client.lifecycle = lifecycle;
+  client.status = lifecycle === "active" ? "Active" : "Completed";
+  saveClients();
+  syncClientToSheet(client, lifecycle === "active" ? "client_shifted_active" : "client_shifted_old", { lifecycle });
+  render();
+  showToast(`${client.name} moved to ${lifecycle === "active" ? "Active Clients" : "Old Clients"}.`);
+}
+
 function selectProfile(id) {
   selectedClientId = id;
   renderDetails();
@@ -944,6 +1031,8 @@ function handleAction(event) {
   if (action === "remind") sendReminder(id);
   if (action === "renewal") sendRenewal(id);
   if (action === "followup") sendFollowUp(id);
+  if (action === "shift-old") setClientLifecycle(id, "old");
+  if (action === "shift-active") setClientLifecycle(id, "active");
   if (action === "meeting-done") updateMeeting(id, meetingId, "Done");
   if (action === "meeting-missed") updateMeeting(id, meetingId, "Missed");
   if (action === "meeting-pending") updateMeeting(id, meetingId, "Pending");
@@ -1018,6 +1107,7 @@ function sheetPayload(client, eventType, extra = {}) {
       receivedAmount: receivedFor(client),
       pendingAmount: pendingFor(client),
       nutritionist: client.nutritionist,
+      lifecycle: lifecycleFor(client),
       paymentMode: client.paymentMode,
       notes: client.notes || ""
     },
@@ -1228,7 +1318,7 @@ function bindEvents() {
     elements.endDate.value = planEndDate(elements.startDate.value, elements.planMonths.value);
     if (!elements.meetingDate.value) elements.meetingDate.value = elements.startDate.value;
   });
-  elements.planMonths.addEventListener("input", () => {
+  elements.planMonths.addEventListener("change", () => {
     if (elements.startDate.value) elements.endDate.value = planEndDate(elements.startDate.value, elements.planMonths.value);
   });
 

@@ -155,7 +155,12 @@
             <div class="field-row">
               <label>
                 Plan Months
-                <input id="planMonths" required type="number" min="1" value="3" />
+                <select id="planMonths" required>
+                  <option value="1">One Time</option>
+                  <option value="3" selected>3 Month</option>
+                  <option value="6">6 Month</option>
+                  <option value="12">12 Month</option>
+                </select>
               </label>
               <label>
                 Service Amount
