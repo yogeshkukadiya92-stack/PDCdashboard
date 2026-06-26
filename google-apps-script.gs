@@ -41,7 +41,8 @@ function doPost(e) {
       client.paymentMode || "",
       client.notes || "",
       JSON.stringify(extra),
-      JSON.stringify(payload.clientSnapshot || client)
+      JSON.stringify(payload.clientSnapshot || client),
+      client.nutritionist || ""
     ]);
 
     return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
@@ -76,12 +77,14 @@ function getDashboardSheet_() {
       "Payment Mode",
       "Notes",
       "Extra JSON",
-      "Client Snapshot JSON"
+      "Client Snapshot JSON",
+      "Nutritionist"
     ]);
-    sheet.getRange(1, 1, 1, 18).setFontWeight("bold");
+    sheet.getRange(1, 1, 1, 19).setFontWeight("bold");
     sheet.setFrozenRows(1);
-  } else if (sheet.getLastColumn() < 18) {
-    sheet.getRange(1, 18).setValue("Client Snapshot JSON");
+  } else if (sheet.getLastColumn() < 19) {
+    if (sheet.getLastColumn() < 18) sheet.getRange(1, 18).setValue("Client Snapshot JSON");
+    sheet.getRange(1, 19).setValue("Nutritionist");
   }
 
   return sheet;
@@ -115,6 +118,7 @@ function readClientsFromSheet_() {
       id: clientId,
       name: snapshot.name || entry["Client Name"] || existing.name || "",
       phone: snapshot.phone || entry["Phone"] || existing.phone || "",
+      nutritionist: snapshot.nutritionist || entry["Nutritionist"] || snapshot.leader || existing.nutritionist || existing.leader || "Dr Luv Patel",
       status: snapshot.status || entry["Status"] || existing.status || "Active",
       planMonths: snapshot.planMonths || Number(entry["Plan Months"] || existing.planMonths || 1),
       startDate: snapshot.startDate || entry["Start Date"] || existing.startDate || "",

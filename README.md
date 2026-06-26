@@ -5,6 +5,7 @@ Open `index.html` in a browser to use the dashboard.
 ## Features
 
 - Client name, phone, plan months, start date, end date, and next PDC meeting tracking
+- Nutritionist assignment for Dr Luv Patel and Dt Nilesh Lakhani
 - Service amount, received amount, pending amount, and payment mode tracking
 - Meeting reminder list for overdue and next 7 days
 - Automatic monthly PDC meeting schedule for each plan

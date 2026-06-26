@@ -9,6 +9,12 @@ function createId() {
   return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function normalizeNutritionist(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (text.includes("nilesh")) return "Dt Nilesh Lakhani";
+  return "Dr Luv Patel";
+}
+
 const fallbackSeedClients = [
   {
     id: createId(),
@@ -81,6 +87,7 @@ const elements = {
   planMonths: document.querySelector("#planMonths"),
   serviceAmount: document.querySelector("#serviceAmount"),
   receivedAmount: document.querySelector("#receivedAmount"),
+  nutritionist: document.querySelector("#nutritionist"),
   paymentMode: document.querySelector("#paymentMode"),
   startDate: document.querySelector("#startDate"),
   endDate: document.querySelector("#endDate"),
@@ -161,6 +168,7 @@ function normalizeClient(client) {
     planMonths: Number(client.planMonths || 1),
     serviceAmount: Number(client.serviceAmount || 0),
     receivedAmount: Number(client.receivedAmount || 0),
+    nutritionist: normalizeNutritionist(client.nutritionist || client.leader),
     paymentMode: client.paymentMode || "Online",
     status: client.status || "Active",
     followUpDate: client.followUpDate || "",
@@ -380,7 +388,7 @@ function filteredClients() {
   return clients
     .filter((client) => status === "All" || client.status === status)
     .filter((client) => {
-      const haystack = `${client.name} ${client.phone} ${client.status} ${client.paymentMode} ${client.followUpDate}`.toLowerCase();
+      const haystack = `${client.name} ${client.phone} ${client.nutritionist} ${client.status} ${client.paymentMode} ${client.followUpDate}`.toLowerCase();
       return haystack.includes(query);
     })
     .sort((a, b) => {
@@ -445,6 +453,7 @@ function renderClients() {
               </div>
             </div>
           </td>
+          <td>${escapeHtml(client.nutritionist)}</td>
           <td>${client.planMonths} month<br><span class="muted">${formatDate(client.startDate)} - ${formatDate(client.endDate)}</span></td>
           <td>${formatDate(next?.date)}<br>${getMeetingBadge(days)}</td>
           <td>${client.followUpDate ? `${formatDate(client.followUpDate)}<br>${getMeetingBadge(dateDiffInDays(client.followUpDate))}` : `<span class="muted">-</span>`}</td>
@@ -467,7 +476,7 @@ function renderClients() {
     })
     .join("");
 
-  elements.clientTable.innerHTML = rows || `<tr><td colspan="10"><div class="empty-state">No clients found. Add your first PDC client from the entry form.</div></td></tr>`;
+  elements.clientTable.innerHTML = rows || `<tr><td colspan="11"><div class="empty-state">No clients found. Add your first PDC client from the entry form.</div></td></tr>`;
 }
 
 function renderReminders() {
@@ -552,6 +561,7 @@ function renderDetails() {
   elements.installmentTotal.textContent = formatCurrency(receivedFor(client));
   elements.detailSummary.innerHTML = `
     <div class="summary-tile"><p>Selected Client</p><strong>${escapeHtml(client.name)}</strong></div>
+    <div class="summary-tile"><p>Nutritionist</p><strong>${escapeHtml(client.nutritionist)}</strong></div>
     <div class="summary-tile"><p>Next Meeting</p><strong>${formatDate(next?.date)}</strong></div>
     <div class="summary-tile"><p>Plan Renewal</p><strong>${formatDate(client.endDate)}</strong></div>
     <div class="summary-tile"><p>Pending</p><strong>${formatCurrency(pendingFor(client))}</strong></div>
@@ -645,6 +655,7 @@ function resetForm({ clearProof = true } = {}) {
   elements.planMonths.value = 3;
   elements.serviceAmount.value = 0;
   elements.receivedAmount.value = 0;
+  elements.nutritionist.value = "Dr Luv Patel";
   const today = toDateValue(new Date());
   elements.startDate.value = today;
   elements.meetingDate.value = today;
@@ -665,6 +676,7 @@ async function handleSubmit(event) {
     planMonths: Number(elements.planMonths.value || 1),
     serviceAmount: Number(elements.serviceAmount.value || 0),
     receivedAmount: Number(elements.receivedAmount.value || 0),
+    nutritionist: elements.nutritionist.value,
     paymentMode: elements.paymentMode.value,
     startDate: elements.startDate.value,
     endDate: elements.endDate.value,
@@ -753,6 +765,7 @@ function editClient(id) {
   elements.planMonths.value = client.planMonths;
   elements.serviceAmount.value = client.serviceAmount;
   elements.receivedAmount.value = receivedFor(client);
+  elements.nutritionist.value = normalizeNutritionist(client.nutritionist || client.leader);
   elements.paymentMode.value = client.paymentMode;
   elements.startDate.value = client.startDate;
   elements.endDate.value = client.endDate;
@@ -1004,6 +1017,7 @@ function sheetPayload(client, eventType, extra = {}) {
       serviceAmount: client.serviceAmount,
       receivedAmount: receivedFor(client),
       pendingAmount: pendingFor(client),
+      nutritionist: client.nutritionist,
       paymentMode: client.paymentMode,
       notes: client.notes || ""
     },
