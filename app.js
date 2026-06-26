@@ -1,6 +1,9 @@
 const storageKey = "pdc-dashboard-clients-v7";
 const sheetUrlStorageKey = "pdc-dashboard-sheet-web-app-url";
 const seedVersionStorageKey = "pdc-dashboard-seed-version";
+const authStorageKey = "pdc-dashboard-authenticated";
+const authSessionKey = "pdc-dashboard-session-authenticated";
+const dashboardPassword = "PDC@2026";
 const legacyStorageKeys = [];
 const renewalReminderWindowDays = 20;
 
@@ -118,8 +121,71 @@ const elements = {
   syncStatus: document.querySelector("#syncStatus"),
   formStatus: document.querySelector("#formStatus"),
   saveProof: document.querySelector("#saveProof"),
-  toast: document.querySelector("#toast")
+  toast: document.querySelector("#toast"),
+  loginForm: document.querySelector("#loginForm"),
+  loginEmail: document.querySelector("#loginEmail"),
+  loginPassword: document.querySelector("#loginPassword"),
+  rememberLogin: document.querySelector("#rememberLogin"),
+  passwordToggle: document.querySelector("#passwordToggle"),
+  forgotPasswordButton: document.querySelector("#forgotPasswordButton")
 };
+
+function isAuthenticated() {
+  return localStorage.getItem(authStorageKey) === "true" || sessionStorage.getItem(authSessionKey) === "true";
+}
+
+function applyAuthState() {
+  document.body.classList.remove("auth-pending");
+  document.body.classList.toggle("is-authenticated", isAuthenticated());
+  if (window.lucide) lucide.createIcons();
+}
+
+function handleLogin(event) {
+  event.preventDefault();
+  const username = elements.loginEmail.value.trim();
+  const password = elements.loginPassword.value.trim();
+  if (!username || !password) {
+    showToast("Please enter your username and password.");
+    return;
+  }
+  if (password !== dashboardPassword) {
+    showToast("Incorrect password. Please try again.");
+    elements.loginPassword.focus();
+    return;
+  }
+
+  if (elements.rememberLogin.checked) {
+    localStorage.setItem(authStorageKey, "true");
+    sessionStorage.removeItem(authSessionKey);
+  } else {
+    sessionStorage.setItem(authSessionKey, "true");
+    localStorage.removeItem(authStorageKey);
+  }
+  applyAuthState();
+  switchView(window.location.hash.replace("#", "") || "view-overview");
+  showToast("Login successful. Welcome to your dashboard.");
+}
+
+function logoutDashboard() {
+  localStorage.removeItem(authStorageKey);
+  sessionStorage.removeItem(authSessionKey);
+  elements.loginPassword.value = "";
+  applyAuthState();
+  showToast("You have been logged out.");
+}
+
+function togglePasswordVisibility() {
+  const shouldShow = elements.loginPassword.type === "password";
+  elements.loginPassword.type = shouldShow ? "text" : "password";
+  elements.passwordToggle.setAttribute("aria-label", shouldShow ? "Hide password" : "Show password");
+  elements.passwordToggle.setAttribute("title", shouldShow ? "Hide password" : "Show password");
+  elements.passwordToggle.innerHTML = `<i data-lucide="${shouldShow ? "eye-off" : "eye"}"></i>`;
+  if (window.lucide) lucide.createIcons();
+}
+
+function handleForgotPassword() {
+  showToast("Please contact the PDC admin to reset your dashboard password.");
+}
 
 function loadClients() {
   const saved = localStorage.getItem(storageKey) || legacyStorageKeys.map((key) => localStorage.getItem(key)).find(Boolean);
@@ -1283,6 +1349,9 @@ function switchView(viewId) {
 
 function bindEvents() {
   document.addEventListener("click", handleGlobalButtonClick, true);
+  elements.loginForm.addEventListener("submit", handleLogin);
+  elements.passwordToggle.addEventListener("click", togglePasswordVisibility);
+  elements.forgotPasswordButton.addEventListener("click", handleForgotPassword);
   const navLinks = document.querySelectorAll(".nav-links a");
   navLinks.forEach((link) => {
     link.addEventListener("click", (e) => {
@@ -1333,6 +1402,7 @@ Object.assign(window, {
   exportData,
   handleAction,
   handleSubmit,
+  logoutDashboard,
   print: window.print.bind(window),
   resetForm,
   saveSheetUrl,
@@ -1342,6 +1412,7 @@ Object.assign(window, {
 });
 
 bindEvents();
+applyAuthState();
 resetForm();
 switchView(window.location.hash.replace("#", "") || "view-overview");
 render();

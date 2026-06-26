@@ -4,11 +4,56 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PDC Client Dashboard</title>
-    <link rel="stylesheet" href="./styles.css?v=20260626-2" />
+    <link rel="stylesheet" href="./styles.css?v=20260626-3" />
     <script src="./seed-data.js?v=20260625-2"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   </head>
-  <body>
+  <body class="auth-pending">
+    <section class="login-screen" id="loginScreen" aria-labelledby="loginTitle">
+      <div class="login-bg-word">Login</div>
+      <div class="login-stage">
+        <div class="login-brand">
+          <div class="login-brand-mark">PDC</div>
+          <div>
+            <strong>Personal Diet Counselling</strong>
+            <span>Secure dashboard access</span>
+          </div>
+        </div>
+        <img class="login-food login-food-left" src="./assets/login-food.webp" alt="" />
+        <img class="login-food login-food-right" src="./assets/login-food.webp" alt="" />
+
+        <form class="login-card" id="loginForm">
+          <div class="login-heading">
+            <h1 id="loginTitle">Login</h1>
+            <p>Access your PDC client dashboard.</p>
+          </div>
+
+          <label class="login-field">
+            <i data-lucide="mail"></i>
+            <input id="loginEmail" type="text" autocomplete="username" placeholder="Enter email or username" required />
+          </label>
+
+          <label class="login-field">
+            <i data-lucide="lock-keyhole"></i>
+            <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" required />
+            <button class="password-toggle" id="passwordToggle" type="button" aria-label="Show password" title="Show password">
+              <i data-lucide="eye"></i>
+            </button>
+          </label>
+
+          <div class="login-options">
+            <label>
+              <input id="rememberLogin" type="checkbox" checked />
+              Remember me
+            </label>
+            <button id="forgotPasswordButton" type="button">Forgot Password?</button>
+          </div>
+
+          <button class="login-submit" type="submit">Login</button>
+        </form>
+      </div>
+    </section>
+
     <aside class="sidebar" aria-label="Dashboard navigation">
       <div class="brand">
         <div class="brand-mark">PDC</div>
@@ -41,6 +86,10 @@
         <div class="topbar-actions">
           <button class="icon-button" id="notifyButton" type="button" title="Enable notifications" aria-label="Enable notifications" onclick="event.stopImmediatePropagation(); enableNotifications(); return false;">
             <i data-lucide="bell"></i>
+          </button>
+          <button class="ghost-button" id="logoutButton" type="button" onclick="event.stopImmediatePropagation(); logoutDashboard(); return false;">
+            <i data-lucide="log-out"></i>
+            Logout
           </button>
           <button class="ghost-button" id="exportButton" type="button" onclick="event.stopImmediatePropagation(); exportData(); return false;">
             <i data-lucide="download"></i>
@@ -375,6 +424,6 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-    <script src="./app.js?v=20260626-1"></script>
+    <script src="./app.js?v=20260626-2"></script>
   </body>
 </html>
