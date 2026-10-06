@@ -78,8 +78,8 @@ function verify(password, hash) {
   return timingSafeEqual(actual, Buffer.from(key, "hex"));
 }
 function passwordValid(p) {
-  if (typeof p !== "string" || p.length < 12 || p.length > 200)
-    throw new Error("Use a password with 12–200 characters.");
+  if (typeof p !== "string" || p.length < 5 || p.length > 200)
+    throw new Error("Use a password with 5–200 characters.");
 }
 function addUser(input) {
   const email = String(input.email || "")

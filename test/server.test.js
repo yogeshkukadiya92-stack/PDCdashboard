@@ -11,7 +11,7 @@ const port = 18473,
 let server;
 const credentials = {
   email: "admin@example.com",
-  password: "TestPassword!123",
+  password: "12345",
 };
 async function request(url, method = "GET", body, cookie = "") {
   const res = await fetch(base + url, {
@@ -310,3 +310,15 @@ test("existing clients without a mobile number retain their records", async () =
   assert.equal(saved.status,200);
   assert.equal(saved.data.clients.find(c=>c.id===client.id).phone,'');
 });
+
+ test("passwords accept five digits and reject shorter values", async () => {
+  const admin = (await request("/api/auth/login", "POST", credentials)).cookie;
+  const data = { name: "Password boundary", email: "boundary@example.com", role: "salesperson", password: "1234" };
+  assert.equal((await request("/api/users", "POST", data, admin)).status, 400);
+  data.password = "56789";
+  const created = await request("/api/users", "POST", data, admin);
+  assert.equal(created.status, 201);
+  const login = await request("/api/auth/login", "POST", { email: data.email, password: data.password });
+  assert.equal(login.status, 200);
+  assert.ok(login.cookie);
+ });

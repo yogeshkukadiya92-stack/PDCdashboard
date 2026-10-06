@@ -459,7 +459,7 @@
       if (action === "new-user")
         modal(
           "Add team member",
-          `<div class="crm-form-grid">${fields("Name", input("name", "", "text", "required"))}${fields("Email", input("email", "", "email", "required"))}${fields("Role", select("role", ["salesperson", "nutritionist", "admin"], "salesperson"))}${fields("Initial password", input("password", "", "password", 'required minlength="12" autocomplete="new-password"'))}</div><p>For nutritionist access, use the exact name Dr Luv Patel or Dt Nilesh Lakhani.</p>`,
+          `<div class="crm-form-grid">${fields("Name", input("name", "", "text", "required"))}${fields("Email", input("email", "", "email", "required"))}${fields("Role", select("role", ["salesperson", "nutritionist", "admin"], "salesperson"))}${fields("Initial password", input("password", "", "password", 'required minlength="5" autocomplete="new-password"'))}</div><p>For nutritionist access, use the exact name Dr Luv Patel or Dt Nilesh Lakhani.</p>`,
           "Create account",
           async (b) => {
             await api("/api/users", {
@@ -478,7 +478,7 @@
               "password",
               "",
               "password",
-              'required minlength="12" autocomplete="new-password"',
+              'required minlength="5" autocomplete="new-password"',
             ),
           ),
           "Reset password",
@@ -512,7 +512,7 @@
                 "password",
                 "",
                 "password",
-                'required minlength="12" autocomplete="new-password"',
+                'required minlength="5" autocomplete="new-password"',
               ),
             ),
           "Change password",
