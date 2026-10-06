@@ -302,3 +302,11 @@ test("database and accounts survive a server restart", async () => {
   assert.equal(state.clients.length,1);
   assert.equal(state.users.length,3);
 });
+
+test("existing clients without a mobile number retain their records", async () => {
+  const admin = (await request('/api/auth/login','POST',credentials)).cookie;
+  const client={id:'legacy-no-phone',name:'Existing Client',phone:'',serviceAmount:4000,receivedAmount:0};
+  const saved=await request('/api/clients','PUT',{clients:[client],deleted:[]},admin);
+  assert.equal(saved.status,200);
+  assert.equal(saved.data.clients.find(c=>c.id===client.id).phone,'');
+});

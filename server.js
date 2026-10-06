@@ -540,7 +540,7 @@ const server = http.createServer(async (req, res) => {
               typeof c.id !== "string" ||
               !/^[a-zA-Z0-9_-]{1,120}$/.test(c.id) ||
               !c.name ||
-              !c.phone
+              (c.phone != null && typeof c.phone !== "string")
             )
               fail("Invalid client.");
             const existing = record("clients", c.id);
@@ -553,7 +553,7 @@ const server = http.createServer(async (req, res) => {
               !Number.isFinite(Number(c.serviceAmount)) ||
               !Number.isFinite(Number(c.receivedAmount)) ||
               Number(c.receivedAmount) < 0 ||
-              Number(c.receivedAmount) > Number(c.serviceAmount)
+              (Number(c.receivedAmount) > Number(c.serviceAmount) && !(existing && Number(existing.receivedAmount) === Number(c.receivedAmount) && Number(existing.serviceAmount) === Number(c.serviceAmount)))
             )
               fail("Invalid payment amounts.");
             put("clients", { ...c, revision: (existing?.revision || 0) + 1 });
@@ -597,7 +597,7 @@ const server = http.createServer(async (req, res) => {
               typeof c.id !== "string" ||
               !/^[a-zA-Z0-9_-]{1,120}$/.test(c.id) ||
               !c.name ||
-              !c.phone
+              (c.phone != null && typeof c.phone !== "string")
             )
               fail("Invalid client backup.");
             put("clients", c);
