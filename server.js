@@ -1,3 +1,4 @@
+import { createCallFlowApi } from './callflow-api.js';
 import http from "node:http";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -215,6 +216,7 @@ const staticFiles = new Set([
   "styles.css",
   "crm.css",
 ]);
+const callflow = createCallFlowApi({ db, rows, record, put, transaction, audit, verify, body, fail });
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   const p = url.pathname;
@@ -228,6 +230,7 @@ const server = http.createServer(async (req, res) => {
   };
   try {
     if (p === "/api/health") return json({ ok: true });
+    if (await callflow(req, url, json)) return;
     if (p.startsWith("/api/")) {
       if (
         !["GET", "HEAD"].includes(req.method) &&
