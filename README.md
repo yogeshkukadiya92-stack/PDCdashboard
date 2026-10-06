@@ -55,7 +55,7 @@ Before switching production to this version:
 1. In the **existing browser/profile** used for PDC, log in to the old dashboard and **Export** the existing clients. Keep that JSON backup. Do not clear browser storage.
 2. Use the application's existing Dockerfile build and keep its internal port at **80**.
 3. Add a **persistent named volume** mounted at **`/app/data`**. This is required: SQLite, accounts and sessions live there. Use one running application replica; SQLite is local to this volume.
-4. Add runtime environment variables **`ADMIN_EMAIL`** (your admin email) and **`ADMIN_PASSWORD`** (a new password of at least 12 characters). Optional: `ADMIN_NAME`. The initial account is created only when the database is empty. Later password changes use My password or Team → Reset password.
+4. Add runtime environment variables **`ADMIN_EMAIL`** (your admin email) and **`ADMIN_PASSWORD`** (a new password of at least 5 characters). Optional: `ADMIN_NAME`. The initial account is created only when the database is empty. Later password changes use My password or Team → Reset password.
 5. Deploy this version, then log in with those new credentials. The previous password embedded in the website no longer applies.
 6. From the original browser, click **Back up & import existing clients**. A backup is downloaded before migration. This copies browser client records without removing the original browser backup. Alternatively use the existing client JSON Import control. Imported records persist on the server after a successful save.
 7. In **Team**, create each salesperson's account. Assign leads in **CRM**. A nutritionist account must use the exact configured name `Dr Luv Patel` or `Dt Nilesh Lakhani`; it can read only that nutritionist's clients.
