@@ -3,8 +3,8 @@ const sheetUrlStorageKey = "pdc-dashboard-sheet-web-app-url";
 const seedVersionStorageKey = "pdc-dashboard-seed-version";
 const authStorageKey = "pdc-dashboard-authenticated";
 const authSessionKey = "pdc-dashboard-session-authenticated";
-const dashboardEmail = "Jigneshcfl01@gmail.com";
-const dashboardPassword = "PDC@123";
+let currentUser = null;
+let clientServerSnapshot = [];
 const legacyStorageKeys = [];
 const renewalReminderWindowDays = 20;
 
@@ -14,7 +14,9 @@ function createId() {
 }
 
 function normalizeNutritionist(value) {
-  const text = String(value || "").trim().toLowerCase();
+  const text = String(value || "")
+    .trim()
+    .toLowerCase();
   if (text.includes("nilesh")) return "Dt Nilesh Lakhani";
   return "Dr Luv Patel";
 }
@@ -34,7 +36,7 @@ const fallbackSeedClients = [
     followUpDate: "",
     status: "Active",
     notes: "Weight loss plan, monthly progress review.",
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   },
   {
     id: createId(),
@@ -50,7 +52,7 @@ const fallbackSeedClients = [
     followUpDate: "",
     status: "Active",
     notes: "Diabetes-friendly meal counselling.",
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   },
   {
     id: createId(),
@@ -66,15 +68,18 @@ const fallbackSeedClients = [
     followUpDate: "",
     status: "Active",
     notes: "Follow-up for diet compliance.",
-    createdAt: new Date().toISOString()
-  }
+    createdAt: new Date().toISOString(),
+  },
 ];
 
-const importedSeedClients = Array.isArray(window.__PDC_IMPORTED_CLIENTS__) ? window.__PDC_IMPORTED_CLIENTS__ : [];
+const importedSeedClients = Array.isArray(window.__PDC_IMPORTED_CLIENTS__)
+  ? window.__PDC_IMPORTED_CLIENTS__
+  : [];
 const importedSeedVersion = window.__PDC_IMPORTED_CLIENTS_VERSION__ || "";
-const seedClients = importedSeedClients.length > 0 ? importedSeedClients : fallbackSeedClients;
+const seedClients =
+  importedSeedClients.length > 0 ? importedSeedClients : fallbackSeedClients;
 
-let clients = loadClients();
+let clients = [];
 let selectedClientId = clients[0]?.id || "";
 let lastSavedClientId = "";
 
@@ -86,12 +91,18 @@ const elements = {
   dueSoonCount: document.querySelector("#dueSoonCount"),
   overviewNutritionist: document.querySelector("#overviewNutritionist"),
   nutritionistTotalClients: document.querySelector("#nutritionistTotalClients"),
-  nutritionistActiveClients: document.querySelector("#nutritionistActiveClients"),
+  nutritionistActiveClients: document.querySelector(
+    "#nutritionistActiveClients",
+  ),
   nutritionistOldClients: document.querySelector("#nutritionistOldClients"),
-  nutritionistMonthMeetings: document.querySelector("#nutritionistMonthMeetings"),
+  nutritionistMonthMeetings: document.querySelector(
+    "#nutritionistMonthMeetings",
+  ),
   nutritionistClientTitle: document.querySelector("#nutritionistClientTitle"),
   nutritionistClientList: document.querySelector("#nutritionistClientList"),
-  shareNutritionistMeetingsButton: document.querySelector("#shareNutritionistMeetingsButton"),
+  shareNutritionistMeetingsButton: document.querySelector(
+    "#shareNutritionistMeetingsButton",
+  ),
   clientForm: document.querySelector("#clientForm"),
   clientId: document.querySelector("#clientId"),
   clientName: document.querySelector("#clientName"),
@@ -136,58 +147,79 @@ const elements = {
   loginPassword: document.querySelector("#loginPassword"),
   rememberLogin: document.querySelector("#rememberLogin"),
   passwordToggle: document.querySelector("#passwordToggle"),
-  forgotPasswordButton: document.querySelector("#forgotPasswordButton")
+  forgotPasswordButton: document.querySelector("#forgotPasswordButton"),
 };
 
 function isAuthenticated() {
-  return localStorage.getItem(authStorageKey) === "true" || sessionStorage.getItem(authSessionKey) === "true";
+  return Boolean(currentUser);
 }
-
 function applyAuthState() {
   document.body.classList.remove("auth-pending");
   document.body.classList.toggle("is-authenticated", isAuthenticated());
   if (window.lucide) lucide.createIcons();
 }
-
-function handleLogin(event) {
-  event.preventDefault();
-  const username = elements.loginEmail.value.trim();
-  const password = elements.loginPassword.value.trim();
-  if (!username || !password) {
-    showToast("Please enter your username and password.");
-    return;
+async function api(path, options = {}) {
+  const response = await fetch(path, {
+    credentials: "same-origin",
+    ...options,
+    headers: { "Content-Type": "application/json", ...options.headers },
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    if (response.status === 401 && currentUser) {
+      currentUser = null;
+      applyAuthState();
+    }
+    throw new Error(data.error || "Unable to complete the request.");
   }
-  if (username.toLowerCase() !== dashboardEmail.toLowerCase() || password !== dashboardPassword) {
-    showToast("Incorrect email or password. Please try again.");
-    elements.loginPassword.focus();
-    return;
-  }
-
-  if (elements.rememberLogin.checked) {
-    localStorage.setItem(authStorageKey, "true");
-    sessionStorage.removeItem(authSessionKey);
-  } else {
-    sessionStorage.setItem(authSessionKey, "true");
-    localStorage.removeItem(authStorageKey);
-  }
-  applyAuthState();
-  switchView(window.location.hash.replace("#", "") || "view-overview");
-  showToast("Login successful. Welcome to your dashboard.");
+  return data;
 }
-
-function logoutDashboard() {
-  localStorage.removeItem(authStorageKey);
-  sessionStorage.removeItem(authSessionKey);
+async function handleLogin(event) {
+  event.preventDefault();
+  const button = elements.loginForm.querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    await api("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        email: elements.loginEmail.value.trim(),
+        password: elements.loginPassword.value,
+        remember: elements.rememberLogin.checked,
+      }),
+    });
+    elements.loginPassword.value = "";
+    await window.crmRefresh();
+    showToast("Login successful.");
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+async function logoutDashboard() {
+  try {
+    await api("/api/auth/logout", { method: "POST" });
+  } catch (error) {
+    showToast(error.message);
+    return;
+  }
+  currentUser = null;
+  clients = [];
+  clientServerSnapshot = [];
   elements.loginPassword.value = "";
   applyAuthState();
-  showToast("You have been logged out.");
 }
-
 function togglePasswordVisibility() {
   const shouldShow = elements.loginPassword.type === "password";
   elements.loginPassword.type = shouldShow ? "text" : "password";
-  elements.passwordToggle.setAttribute("aria-label", shouldShow ? "Hide password" : "Show password");
-  elements.passwordToggle.setAttribute("title", shouldShow ? "Hide password" : "Show password");
+  elements.passwordToggle.setAttribute(
+    "aria-label",
+    shouldShow ? "Hide password" : "Show password",
+  );
+  elements.passwordToggle.setAttribute(
+    "title",
+    shouldShow ? "Hide password" : "Show password",
+  );
   elements.passwordToggle.innerHTML = `<i data-lucide="${shouldShow ? "eye-off" : "eye"}"></i>`;
   if (window.lucide) lucide.createIcons();
 }
@@ -196,31 +228,26 @@ function handleForgotPassword() {
   showToast("Please contact the PDC admin to reset your dashboard password.");
 }
 
-function loadClients() {
-  const saved = localStorage.getItem(storageKey) || legacyStorageKeys.map((key) => localStorage.getItem(key)).find(Boolean);
-  const savedSeedVersion = localStorage.getItem(seedVersionStorageKey) || "";
-  let loadedClients = seedClients;
-  if (saved) {
-    try {
-      loadedClients = JSON.parse(saved);
-    } catch {
-      legacyStorageKeys.concat(storageKey).forEach((key) => localStorage.removeItem(key));
-    }
+function legacyClientBackup() {
+  const saved = localStorage.getItem(storageKey);
+  if (!saved) return [];
+  try {
+    const data = JSON.parse(saved);
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
   }
-  if (importedSeedClients.length > 0 && savedSeedVersion !== importedSeedVersion) {
-    loadedClients = importedSeedClients;
-  }
-  const normalized = loadedClients.map(normalizeClient);
-  localStorage.setItem(storageKey, JSON.stringify(normalized));
-  if (importedSeedVersion) localStorage.setItem(seedVersionStorageKey, importedSeedVersion);
-  return normalized;
 }
-
 function mergeClientLists(existingClients, incomingClients) {
   const byIdentity = new Map();
   const identityFor = (client) => {
     const phone = String(client.phone || "").replace(/\D/g, "");
-    return phone || `${String(client.name || "").trim().toLowerCase()}|${String(client.startDate || "").trim()}`;
+    return (
+      phone ||
+      `${String(client.name || "")
+        .trim()
+        .toLowerCase()}|${String(client.startDate || "").trim()}`
+    );
   };
 
   [...existingClients, ...incomingClients].forEach((client) => {
@@ -230,12 +257,36 @@ function mergeClientLists(existingClients, incomingClients) {
   return Array.from(byIdentity.values());
 }
 
-function saveClients() {
+async function saveClients() {
+  if (currentUser?.role !== "admin") {
+    showToast("Admin access is required to change client records.");
+    return false;
+  }
   clients = clients.map(normalizeClient);
-  localStorage.setItem(storageKey, JSON.stringify(clients));
-  if (importedSeedVersion) localStorage.setItem(seedVersionStorageKey, importedSeedVersion);
+  const changed = clients.filter(
+    (c) =>
+      JSON.stringify(c) !==
+      JSON.stringify(clientServerSnapshot.find((x) => x.id === c.id)),
+  );
+  const deleted = clientServerSnapshot
+    .filter((c) => !clients.some((x) => x.id === c.id))
+    .map((c) => ({ id: c.id, revision: c.revision || 0 }));
+  try {
+    const saved = await api("/api/clients", {
+      method: "PUT",
+      body: JSON.stringify({ clients: changed, deleted }),
+    });
+    clients = saved.clients.map(normalizeClient);
+    clientServerSnapshot = structuredClone(clients);
+    return true;
+  } catch (error) {
+    clients = structuredClone(clientServerSnapshot);
+    render();
+    showToast(`Save failed: ${error.message}`);
+    setFormStatus(`Save failed: ${error.message}`);
+    return false;
+  }
 }
-
 function normalizeClient(client) {
   const normalized = {
     ...client,
@@ -244,18 +295,25 @@ function normalizeClient(client) {
     serviceAmount: Number(client.serviceAmount || 0),
     receivedAmount: Number(client.receivedAmount || 0),
     nutritionist: normalizeNutritionist(client.nutritionist || client.leader),
-    lifecycle: client.lifecycle || (client.endDate && dateDiffInDays(client.endDate) < 0 ? "old" : "active"),
+    lifecycle:
+      client.lifecycle ||
+      (client.endDate && dateDiffInDays(client.endDate) < 0 ? "old" : "active"),
     paymentMode: client.paymentMode || "Online",
     status: client.status || "Active",
     followUpDate: client.followUpDate || "",
-    createdAt: client.createdAt || new Date().toISOString()
+    createdAt: client.createdAt || new Date().toISOString(),
   };
 
-  normalized.endDate = normalized.endDate || planEndDate(normalized.startDate, normalized.planMonths);
+  normalized.endDate =
+    normalized.endDate ||
+    planEndDate(normalized.startDate, normalized.planMonths);
   normalized.payments = normalizePayments(normalized);
   normalized.receivedAmount = receivedFor(normalized);
   normalized.meetings = normalizeMeetings(normalized);
-  normalized.meetingDate = nextMeetingFor(normalized)?.date || normalized.meetingDate || normalized.startDate;
+  normalized.meetingDate =
+    nextMeetingFor(normalized)?.date ||
+    normalized.meetingDate ||
+    normalized.startDate;
   return normalized;
 }
 
@@ -266,7 +324,7 @@ function normalizePayments(client) {
       date: payment.date || client.startDate,
       amount: Number(payment.amount || 0),
       mode: payment.mode || client.paymentMode || "Online",
-      note: payment.note || ""
+      note: payment.note || "",
     }));
   }
 
@@ -277,8 +335,8 @@ function normalizePayments(client) {
       date: client.startDate,
       amount: Number(client.receivedAmount || 0),
       mode: client.paymentMode || "Online",
-      note: "Opening received amount"
-    }
+      note: "Opening received amount",
+    },
   ];
 }
 
@@ -286,13 +344,15 @@ function normalizeMeetings(client) {
   const generated = generateMonthlyMeetings(client);
   const existing = Array.isArray(client.meetings) ? client.meetings : [];
   return generated.map((meeting) => {
-    const match = existing.find((item) => item.id === meeting.id || item.date === meeting.date);
+    const match = existing.find(
+      (item) => item.id === meeting.id || item.date === meeting.date,
+    );
     return {
       ...meeting,
       status: match?.status || meeting.status,
       notes: match?.notes || "",
       weight: match?.weight || "",
-      goal: match?.goal || ""
+      goal: match?.goal || "",
     };
   });
 }
@@ -306,7 +366,7 @@ function generateMonthlyMeetings(client) {
     status: "Pending",
     notes: "",
     weight: "",
-    goal: ""
+    goal: "",
   }));
 }
 
@@ -314,7 +374,7 @@ function formatCurrency(value) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   }).format(Number(value || 0));
 }
 
@@ -323,7 +383,7 @@ function formatDate(value) {
   return new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
-    year: "numeric"
+    year: "numeric",
   }).format(new Date(`${value}T00:00:00`));
 }
 
@@ -340,7 +400,11 @@ function addCalendarMonths(dateValue, months) {
   const day = date.getDate();
   date.setDate(1);
   date.setMonth(date.getMonth() + Number(months || 0));
-  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const lastDay = new Date(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    0,
+  ).getDate();
   date.setDate(Math.min(day, lastDay));
   return toDateValue(date);
 }
@@ -359,7 +423,10 @@ function toDateValue(date) {
 }
 
 function receivedFor(client) {
-  return (client.payments || []).reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  return (client.payments || []).reduce(
+    (sum, payment) => sum + Number(payment.amount || 0),
+    0,
+  );
 }
 
 function pendingFor(client) {
@@ -382,8 +449,14 @@ function planLabel(months) {
 function nextMeetingFor(client) {
   const pending = (client.meetings || [])
     .filter((meeting) => meeting.status === "Pending")
-    .sort((a, b) => new Date(`${a.date}T00:00:00`) - new Date(`${b.date}T00:00:00`));
-  return pending.find((meeting) => dateDiffInDays(meeting.date) >= 0) || pending[0] || client.meetings?.at(-1);
+    .sort(
+      (a, b) => new Date(`${a.date}T00:00:00`) - new Date(`${b.date}T00:00:00`),
+    );
+  return (
+    pending.find((meeting) => dateDiffInDays(meeting.date) >= 0) ||
+    pending[0] ||
+    client.meetings?.at(-1)
+  );
 }
 
 function renewalDaysFor(client) {
@@ -398,12 +471,18 @@ function getMeetingBadge(days) {
 }
 
 function getStatusBadge(status) {
-  const className = status === "Completed" ? "success" : status === "Paused" || status === "Interested" ? "warning" : "";
+  const className =
+    status === "Completed"
+      ? "success"
+      : status === "Paused" || status === "Interested"
+        ? "warning"
+        : "";
   return `<span class="badge ${className}">${status}</span>`;
 }
 
 function getMeetingStatusBadge(status) {
-  const className = status === "Done" ? "success" : status === "Missed" ? "danger" : "warning";
+  const className =
+    status === "Done" ? "success" : status === "Missed" ? "danger" : "warning";
   return `<span class="badge ${className}">${status}</span>`;
 }
 
@@ -433,7 +512,10 @@ function isMeetingInCurrentMonth(meeting) {
   if (!meeting?.date) return false;
   const meetingDate = new Date(`${meeting.date}T00:00:00`);
   const now = new Date();
-  return meetingDate.getMonth() === now.getMonth() && meetingDate.getFullYear() === now.getFullYear();
+  return (
+    meetingDate.getMonth() === now.getMonth() &&
+    meetingDate.getFullYear() === now.getFullYear()
+  );
 }
 
 function selectedOverviewNutritionist() {
@@ -442,7 +524,9 @@ function selectedOverviewNutritionist() {
 
 function clientsForNutritionist(nutritionist = selectedOverviewNutritionist()) {
   return clients
-    .filter((client) => normalizeNutritionist(client.nutritionist) === nutritionist)
+    .filter(
+      (client) => normalizeNutritionist(client.nutritionist) === nutritionist,
+    )
     .sort((a, b) => {
       const statusOrder = lifecycleFor(a).localeCompare(lifecycleFor(b));
       if (statusOrder !== 0) return statusOrder;
@@ -458,16 +542,23 @@ function renderNutritionistOverview() {
   if (!elements.overviewNutritionist) return;
   const nutritionist = selectedOverviewNutritionist();
   const selectedClients = clientsForNutritionist(nutritionist);
-  const activeClients = selectedClients.filter((client) => lifecycleFor(client) === "active");
-  const oldClients = selectedClients.filter((client) => lifecycleFor(client) === "old");
-  const meetingClients = selectedClients.filter((client) => meetingsThisMonthFor(client).length > 0);
+  const activeClients = selectedClients.filter(
+    (client) => lifecycleFor(client) === "active",
+  );
+  const oldClients = selectedClients.filter(
+    (client) => lifecycleFor(client) === "old",
+  );
+  const meetingClients = selectedClients.filter(
+    (client) => meetingsThisMonthFor(client).length > 0,
+  );
 
   elements.nutritionistTotalClients.textContent = selectedClients.length;
   elements.nutritionistActiveClients.textContent = activeClients.length;
   elements.nutritionistOldClients.textContent = oldClients.length;
   elements.nutritionistMonthMeetings.textContent = meetingClients.length;
   elements.nutritionistClientTitle.textContent = `${nutritionist} Clients`;
-  elements.shareNutritionistMeetingsButton.disabled = meetingClients.length === 0;
+  elements.shareNutritionistMeetingsButton.disabled =
+    meetingClients.length === 0;
 
   elements.nutritionistClientList.innerHTML =
     selectedClients
@@ -493,7 +584,8 @@ function renderNutritionistOverview() {
           </article>
         `;
       })
-      .join("") || `<div class="empty-state">No clients found for ${escapeHtml(nutritionist)}.</div>`;
+      .join("") ||
+    `<div class="empty-state">No clients found for ${escapeHtml(nutritionist)}.</div>`;
 }
 
 function ensureSelectedClient() {
@@ -507,7 +599,7 @@ function renderToday() {
     weekday: "short",
     day: "2-digit",
     month: "short",
-    year: "numeric"
+    year: "numeric",
   }).format(new Date());
 }
 
@@ -545,18 +637,24 @@ function filteredClients() {
   return clients
     .filter((client) => status === "All" || client.status === status)
     .filter((client) => {
-      const haystack = `${client.name} ${client.phone} ${client.nutritionist} ${client.status} ${client.paymentMode} ${client.followUpDate}`.toLowerCase();
+      const haystack =
+        `${client.name} ${client.phone} ${client.nutritionist} ${client.status} ${client.paymentMode} ${client.followUpDate}`.toLowerCase();
       return haystack.includes(query);
     })
     .sort((a, b) => {
       if (a.id === lastSavedClientId) return -1;
       if (b.id === lastSavedClientId) return 1;
-      return new Date(`${a.meetingDate}T00:00:00`) - new Date(`${b.meetingDate}T00:00:00`);
+      return (
+        new Date(`${a.meetingDate}T00:00:00`) -
+        new Date(`${b.meetingDate}T00:00:00`)
+      );
     });
 }
 
 function renderMetrics() {
-  const activeClients = clients.filter((client) => lifecycleFor(client) === "active");
+  const activeClients = clients.filter(
+    (client) => lifecycleFor(client) === "active",
+  );
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   const monthMeetings = activeClients.reduce((count, client) => {
@@ -564,16 +662,25 @@ function renderMetrics() {
       count +
       client.meetings.filter((meeting) => {
         const meetingDate = new Date(`${meeting.date}T00:00:00`);
-        return meetingDate.getMonth() === currentMonth && meetingDate.getFullYear() === currentYear;
+        return (
+          meetingDate.getMonth() === currentMonth &&
+          meetingDate.getFullYear() === currentYear
+        );
       }).length
     );
   }, 0);
-  const pendingAmount = activeClients.reduce((sum, client) => sum + pendingFor(client), 0);
+  const pendingAmount = activeClients.reduce(
+    (sum, client) => sum + pendingFor(client),
+    0,
+  );
   const dueSoon = activeClients.filter((client) => {
     const next = nextMeetingFor(client);
     const meetingDays = next ? dateDiffInDays(next.date) : 999;
     const renewalDays = renewalDaysFor(client);
-    return (meetingDays >= 0 && meetingDays <= 7) || (renewalDays >= 0 && renewalDays <= renewalReminderWindowDays);
+    return (
+      (meetingDays >= 0 && meetingDays <= 7) ||
+      (renewalDays >= 0 && renewalDays <= renewalReminderWindowDays)
+    );
   }).length;
   const followUpsDue = clients.filter((client) => {
     if (client.status !== "Interested" || !client.followUpDate) return false;
@@ -633,7 +740,9 @@ function renderClients() {
     })
     .join("");
 
-  elements.clientTable.innerHTML = rows || `<tr><td colspan="11"><div class="empty-state">No clients found. Add your first PDC client from the entry form.</div></td></tr>`;
+  elements.clientTable.innerHTML =
+    rows ||
+    `<tr><td colspan="11"><div class="empty-state">No clients found. Add your first PDC client from the entry form.</div></td></tr>`;
 }
 
 function renderReminders() {
@@ -641,19 +750,33 @@ function renderReminders() {
     .filter((client) => client.status === "Active")
     .map((client) => ({ client, meeting: nextMeetingFor(client) }))
     .filter((item) => item.meeting && dateDiffInDays(item.meeting.date) <= 7)
-    .map((item) => ({ type: "meeting", ...item, days: dateDiffInDays(item.meeting.date) }));
+    .map((item) => ({
+      type: "meeting",
+      ...item,
+      days: dateDiffInDays(item.meeting.date),
+    }));
 
   const renewalItems = clients
     .filter((client) => client.status === "Active")
-    .map((client) => ({ type: "renewal", client, days: renewalDaysFor(client) }))
+    .map((client) => ({
+      type: "renewal",
+      client,
+      days: renewalDaysFor(client),
+    }))
     .filter((item) => item.days >= 0 && item.days <= renewalReminderWindowDays);
 
   const followUpItems = clients
     .filter((client) => client.status === "Interested" && client.followUpDate)
-    .map((client) => ({ type: "followup", client, days: dateDiffInDays(client.followUpDate) }))
+    .map((client) => ({
+      type: "followup",
+      client,
+      days: dateDiffInDays(client.followUpDate),
+    }))
     .filter((item) => item.days <= 7);
 
-  const items = meetingItems.concat(renewalItems, followUpItems).sort((a, b) => a.days - b.days);
+  const items = meetingItems
+    .concat(renewalItems, followUpItems)
+    .sort((a, b) => a.days - b.days);
 
   elements.reminderList.innerHTML =
     items
@@ -699,22 +822,34 @@ function renderReminders() {
           </article>
         `;
       })
-      .join("") || `<div class="empty-state">No urgent meetings, renewals, or follow-ups. Alerts appear before meeting date, plan end date, and interested-client follow-up date.</div>`;
+      .join("") ||
+    `<div class="empty-state">No urgent meetings, renewals, or follow-ups. Alerts appear before meeting date, plan end date, and interested-client follow-up date.</div>`;
 }
 
 function renderClientBuckets() {
   const sortedClients = clients
     .slice()
-    .sort((a, b) => new Date(`${a.endDate || a.startDate}T00:00:00`) - new Date(`${b.endDate || b.startDate}T00:00:00`));
-  const activeClients = sortedClients.filter((client) => lifecycleFor(client) === "active");
-  const oldClients = sortedClients.filter((client) => lifecycleFor(client) === "old");
+    .sort(
+      (a, b) =>
+        new Date(`${a.endDate || a.startDate}T00:00:00`) -
+        new Date(`${b.endDate || b.startDate}T00:00:00`),
+    );
+  const activeClients = sortedClients.filter(
+    (client) => lifecycleFor(client) === "active",
+  );
+  const oldClients = sortedClients.filter(
+    (client) => lifecycleFor(client) === "old",
+  );
 
   const renderBucketItem = (client, targetLifecycle) => {
     const days = renewalDaysFor(client);
     const expired = isPlanExpired(client);
-    const badge = expired ? `<span class="badge danger">Expired</span>` : getMeetingBadge(days);
+    const badge = expired
+      ? `<span class="badge danger">Expired</span>`
+      : getMeetingBadge(days);
     const action = targetLifecycle === "old" ? "shift-old" : "shift-active";
-    const buttonLabel = targetLifecycle === "old" ? "Move to Old" : "Move to Active";
+    const buttonLabel =
+      targetLifecycle === "old" ? "Move to Old" : "Move to Active";
     const icon = targetLifecycle === "old" ? "archive" : "rotate-ccw";
 
     return `
@@ -774,7 +909,9 @@ function renderDetails() {
     return;
   }
 
-  const doneMeetings = client.meetings.filter((meeting) => meeting.status === "Done").length;
+  const doneMeetings = client.meetings.filter(
+    (meeting) => meeting.status === "Done",
+  ).length;
   const next = nextMeetingFor(client);
   elements.meetingProgress.textContent = `${doneMeetings}/${client.meetings.length} done`;
   elements.installmentTotal.textContent = formatCurrency(receivedFor(client));
@@ -789,7 +926,11 @@ function renderDetails() {
   elements.meetingHistory.innerHTML = client.meetings
     .map((meeting, index) => {
       const days = dateDiffInDays(meeting.date);
-      const detail = [meeting.weight ? `Weight: ${escapeHtml(meeting.weight)} kg` : "", meeting.goal ? `Goal: ${escapeHtml(meeting.goal)}` : "", meeting.notes ? `Notes: ${escapeHtml(meeting.notes)}` : ""]
+      const detail = [
+        meeting.weight ? `Weight: ${escapeHtml(meeting.weight)} kg` : "",
+        meeting.goal ? `Goal: ${escapeHtml(meeting.goal)}` : "",
+        meeting.notes ? `Notes: ${escapeHtml(meeting.notes)}` : "",
+      ]
         .filter(Boolean)
         .join(" · ");
       return `
@@ -815,7 +956,10 @@ function renderDetails() {
   elements.paymentHistory.innerHTML =
     client.payments
       .slice()
-      .sort((a, b) => new Date(`${b.date}T00:00:00`) - new Date(`${a.date}T00:00:00`))
+      .sort(
+        (a, b) =>
+          new Date(`${b.date}T00:00:00`) - new Date(`${a.date}T00:00:00`),
+      )
       .map(
         (payment) => `
           <article class="timeline-item">
@@ -827,22 +971,34 @@ function renderDetails() {
               <button class="action-button" type="button" data-action="payment-delete" data-id="${client.id}" data-payment-id="${payment.id}" title="Delete payment" aria-label="Delete payment" onclick="event.stopImmediatePropagation(); handleAction(event); return false;"><i data-lucide="trash-2"></i></button>
             </div>
           </article>
-        `
+        `,
       )
-      .join("") || `<div class="empty-state">No installments recorded yet.</div>`;
+      .join("") ||
+    `<div class="empty-state">No installments recorded yet.</div>`;
 }
 
 function renderClientSelect() {
   const options = clients
-    .map((client) => `<option value="${client.id}" ${client.id === selectedClientId ? "selected" : ""}>${escapeHtml(client.name)}</option>`)
+    .map(
+      (client) =>
+        `<option value="${client.id}" ${client.id === selectedClientId ? "selected" : ""}>${escapeHtml(client.name)}</option>`,
+    )
     .join("");
   elements.detailClientSelect.innerHTML = options;
 }
 
 function renderPayments() {
-  const totalService = clients.reduce((sum, client) => sum + Number(client.serviceAmount || 0), 0);
-  const totalReceived = clients.reduce((sum, client) => sum + receivedFor(client), 0);
-  const percent = totalService ? Math.min(Math.round((totalReceived / totalService) * 100), 100) : 0;
+  const totalService = clients.reduce(
+    (sum, client) => sum + Number(client.serviceAmount || 0),
+    0,
+  );
+  const totalReceived = clients.reduce(
+    (sum, client) => sum + receivedFor(client),
+    0,
+  );
+  const percent = totalService
+    ? Math.min(Math.round((totalReceived / totalService) * 100), 100)
+    : 0;
   elements.paymentDonut.style.setProperty("--percent", percent);
   elements.collectionPercent.textContent = `${percent}%`;
   elements.collectionText.textContent = `${formatCurrency(totalReceived)} received of ${formatCurrency(totalService)}`;
@@ -863,9 +1019,10 @@ function renderPayments() {
           </div>
           <strong>${formatCurrency(pendingFor(client))}</strong>
         </div>
-      `
+      `,
       )
-      .join("") || `<div class="empty-state">All visible payments are fully received.</div>`;
+      .join("") ||
+    `<div class="empty-state">All visible payments are fully received.</div>`;
 }
 
 function resetForm({ clearProof = true } = {}) {
@@ -903,7 +1060,7 @@ async function handleSubmit(event) {
     followUpDate: elements.followUpDate.value,
     status: elements.status.value,
     notes: elements.notes.value.trim(),
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
 
   if (!baseClient.name || !baseClient.phone) {
@@ -916,7 +1073,9 @@ async function handleSubmit(event) {
 
   if (baseClient.receivedAmount > baseClient.serviceAmount) {
     showToast("Received amount cannot exceed the service amount.");
-    setFormStatus("Save blocked: received amount cannot exceed service amount.");
+    setFormStatus(
+      "Save blocked: received amount cannot exceed service amount.",
+    );
     clearSaveProof();
     return;
   }
@@ -937,8 +1096,8 @@ async function handleSubmit(event) {
           date: toDateValue(new Date()),
           amount: diff,
           mode: baseClient.paymentMode,
-          note: diff > 0 ? "Adjustment (Added)" : "Adjustment (Reduced)"
-        }
+          note: diff > 0 ? "Adjustment (Added)" : "Adjustment (Reduced)",
+        },
       ];
     }
 
@@ -946,7 +1105,7 @@ async function handleSubmit(event) {
       ...existing,
       ...baseClient,
       createdAt: existing.createdAt,
-      payments: updatedPayments
+      payments: updatedPayments,
     });
     clients[existingIndex] = client;
     savedClient = client;
@@ -964,14 +1123,24 @@ async function handleSubmit(event) {
     showToast("New client added with monthly PDC schedule.");
   }
 
-  saveClients();
-  const syncOk = await syncClientToSheet(savedClient, existingIndex >= 0 ? "client_updated" : "client_created");
+  if (!(await saveClients())) return;
+  const syncOk = await syncClientToSheet(
+    savedClient,
+    existingIndex >= 0 ? "client_updated" : "client_created",
+  );
   render();
   resetForm({ clearProof: false });
-  setFormStatus(syncOk ? `${successMessage} Google Sheet synced.` : successMessage);
-  setSaveProof(savedClient, existingIndex >= 0 ? "Client updated" : "Client saved");
+  setFormStatus(
+    syncOk ? `${successMessage} Google Sheet synced.` : successMessage,
+  );
+  setSaveProof(
+    savedClient,
+    existingIndex >= 0 ? "Client updated" : "Client saved",
+  );
   requestAnimationFrame(() => {
-    document.querySelector("#clients")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document
+      .querySelector("#clients")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
 
@@ -984,7 +1153,9 @@ function editClient(id) {
   elements.planMonths.value = client.planMonths;
   elements.serviceAmount.value = client.serviceAmount;
   elements.receivedAmount.value = receivedFor(client);
-  elements.nutritionist.value = normalizeNutritionist(client.nutritionist || client.leader);
+  elements.nutritionist.value = normalizeNutritionist(
+    client.nutritionist || client.leader,
+  );
   elements.paymentMode.value = client.paymentMode;
   elements.startDate.value = client.startDate;
   elements.endDate.value = client.endDate;
@@ -993,23 +1164,25 @@ function editClient(id) {
   elements.status.value = client.status;
   elements.notes.value = client.notes || "";
   switchView("view-clients");
-  document.querySelector(".form-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+  document
+    .querySelector(".form-panel")
+    .scrollIntoView({ behavior: "smooth", block: "start" });
   setFormStatus(`Editing ${client.name}. Press Save Client to apply changes.`);
 }
 
-function deleteClient(id) {
+async function deleteClient(id) {
   const client = clients.find((item) => item.id === id);
   if (!client) return;
   const confirmed = confirm(`Delete ${client.name}'s record?`);
   if (!confirmed) return;
   clients = clients.filter((item) => item.id !== id);
-  saveClients();
+  if (!(await saveClients())) return;
   syncClientToSheet(client, "client_deleted");
   render();
   showToast("Client deleted.");
 }
 
-function markPaid(id) {
+async function markPaid(id) {
   const client = clients.find((item) => item.id === id);
   if (!client) return;
   const pending = pendingFor(client);
@@ -1023,16 +1196,19 @@ function markPaid(id) {
     date: toDateValue(new Date()),
     amount: pending,
     mode: client.paymentMode,
-    note: "Marked fully paid"
+    note: "Marked fully paid",
   });
-  saveClients();
-  syncClientToSheet(client, "payment_marked_full", { amount: pending, mode: client.paymentMode });
+  if (!(await saveClients())) return;
+  syncClientToSheet(client, "payment_marked_full", {
+    amount: pending,
+    mode: client.paymentMode,
+  });
   render();
   showToast(`${client.name} marked as fully paid.`);
   setFormStatus(`${client.name} marked fully paid.`);
 }
 
-function addPayment(event) {
+async function addPayment(event) {
   event?.preventDefault();
   const client = clients.find((item) => item.id === selectedClientId);
   if (!client) return;
@@ -1052,48 +1228,56 @@ function addPayment(event) {
     date: elements.paymentDate.value,
     amount,
     mode: elements.paymentEntryMode.value,
-    note: elements.paymentNote.value.trim()
+    note: elements.paymentNote.value.trim(),
   });
-  saveClients();
-  syncClientToSheet(client, "payment_added", { amount, mode: elements.paymentEntryMode.value, date: elements.paymentDate.value });
+  if (!(await saveClients())) return;
+  syncClientToSheet(client, "payment_added", {
+    amount,
+    mode: elements.paymentEntryMode.value,
+    date: elements.paymentDate.value,
+  });
   elements.paymentForm.reset();
   elements.paymentDate.value = toDateValue(new Date());
   render();
   showToast("Payment installment added successfully.");
-  setFormStatus(`${formatCurrency(amount)} installment added for ${client.name}.`);
+  setFormStatus(
+    `${formatCurrency(amount)} installment added for ${client.name}.`,
+  );
 }
 
-function deletePayment(clientId, paymentId) {
+async function deletePayment(clientId, paymentId) {
   const client = clients.find((item) => item.id === clientId);
   if (!client) return;
-  client.payments = client.payments.filter((payment) => payment.id !== paymentId);
-  saveClients();
+  client.payments = client.payments.filter(
+    (payment) => payment.id !== paymentId,
+  );
+  if (!(await saveClients())) return;
   syncClientToSheet(client, "payment_deleted", { paymentId });
   render();
   showToast("Payment installment deleted successfully.");
   setFormStatus("Payment installment deleted.");
 }
 
-function updateMeeting(clientId, meetingId, status) {
+async function updateMeeting(clientId, meetingId, status) {
   const client = clients.find((item) => item.id === clientId);
   const meeting = client?.meetings.find((item) => item.id === meetingId);
   if (!client || !meeting) return;
   meeting.status = status;
-  saveClients();
+  if (!(await saveClients())) return;
   syncClientToSheet(client, "meeting_updated", { meetingId, status });
   render();
   showToast(`Meeting marked as ${status.toLowerCase()}.`);
   setFormStatus(`Meeting updated to ${status.toLowerCase()}.`);
 }
 
-function editMeetingNote(clientId, meetingId) {
+async function editMeetingNote(clientId, meetingId) {
   const client = clients.find((item) => item.id === clientId);
   const meeting = client?.meetings.find((item) => item.id === meetingId);
   if (!client || !meeting) return;
   const notes = prompt("Meeting notes:", meeting.notes || "");
   if (notes === null) return;
   meeting.notes = notes;
-  saveClients();
+  if (!(await saveClients())) return;
   syncClientToSheet(client, "meeting_note_saved", { meetingId });
   render();
   showToast("Meeting note saved successfully.");
@@ -1108,7 +1292,9 @@ function reminderMessage(client) {
 
 function nutritionistClientMessage(client) {
   const monthMeetings = meetingsThisMonthFor(client);
-  const meetingText = monthMeetings.length ? monthMeetings.map((meeting) => formatDate(meeting.date)).join(", ") : "No meeting is scheduled for this month";
+  const meetingText = monthMeetings.length
+    ? monthMeetings.map((meeting) => formatDate(meeting.date)).join(", ")
+    : "No meeting is scheduled for this month";
   return [
     `Hello ${client.name},`,
     "",
@@ -1121,28 +1307,39 @@ function nutritionistClientMessage(client) {
     "Please confirm your availability for the scheduled consultation.",
     "",
     "Regards,",
-    "PDC Team"
+    "PDC Team",
   ].join("\n");
 }
 
-function nutritionistMeetingGroupMessage(nutritionist = selectedOverviewNutritionist()) {
+function nutritionistMeetingGroupMessage(
+  nutritionist = selectedOverviewNutritionist(),
+) {
   const selectedClients = clientsForNutritionist(nutritionist);
-  const meetingClients = selectedClients.filter((client) => meetingsThisMonthFor(client).length > 0);
-  const monthName = new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric" }).format(new Date());
+  const meetingClients = selectedClients.filter(
+    (client) => meetingsThisMonthFor(client).length > 0,
+  );
+  const monthName = new Intl.DateTimeFormat("en-IN", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
   const lines = meetingClients.map((client, index) => {
-    const dates = meetingsThisMonthFor(client).map((meeting) => formatDate(meeting.date)).join(", ");
+    const dates = meetingsThisMonthFor(client)
+      .map((meeting) => formatDate(meeting.date))
+      .join(", ");
     return `${index + 1}. ${client.name} - ${dates} - ${lifecycleFor(client) === "active" ? "Active" : "Old"} - Pending ${formatCurrency(pendingFor(client))}`;
   });
   return [
     `PDC Monthly Meeting Update - ${monthName}`,
     `Nutritionist: ${nutritionist}`,
     "",
-    lines.length ? lines.join("\n") : "No client meetings are scheduled for this month.",
+    lines.length
+      ? lines.join("\n")
+      : "No client meetings are scheduled for this month.",
     "",
     "Please review the schedule and coordinate the required follow-ups.",
     "",
     "Regards,",
-    "PDC Team"
+    "PDC Team",
   ].join("\n");
 }
 
@@ -1163,7 +1360,11 @@ async function sendWhatsApp(client, message) {
   }
   const digits = client.phone.replace(/\D/g, "");
   const phone = digits.length === 10 ? `91${digits}` : digits;
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
+  window.open(
+    `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+    "_blank",
+    "noopener",
+  );
 }
 
 async function shareWhatsAppText(message) {
@@ -1173,7 +1374,11 @@ async function shareWhatsAppText(message) {
   } catch {
     showToast("Message ready. Select the WhatsApp group and send it.");
   }
-  window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank", "noopener");
+  window.open(
+    `https://wa.me/?text=${encodeURIComponent(message)}`,
+    "_blank",
+    "noopener",
+  );
 }
 
 function sendReminder(id) {
@@ -1204,22 +1409,30 @@ function sendFollowUp(id) {
   sendWhatsApp(client, followUpMessage(client));
 }
 
-function setClientLifecycle(id, lifecycle) {
+async function setClientLifecycle(id, lifecycle) {
   const client = clients.find((item) => item.id === id);
   if (!client) return;
   client.lifecycle = lifecycle;
   client.status = lifecycle === "active" ? "Active" : "Completed";
-  saveClients();
-  syncClientToSheet(client, lifecycle === "active" ? "client_shifted_active" : "client_shifted_old", { lifecycle });
+  if (!(await saveClients())) return;
+  syncClientToSheet(
+    client,
+    lifecycle === "active" ? "client_shifted_active" : "client_shifted_old",
+    { lifecycle },
+  );
   render();
-  showToast(`${client.name} moved to ${lifecycle === "active" ? "Active Clients" : "Old Clients"}.`);
+  showToast(
+    `${client.name} moved to ${lifecycle === "active" ? "Active Clients" : "Old Clients"}.`,
+  );
 }
 
 function selectProfile(id) {
   selectedClientId = id;
   renderDetails();
   switchView("view-history");
-  document.querySelector("#history").scrollIntoView({ behavior: "smooth", block: "start" });
+  document
+    .querySelector("#history")
+    .scrollIntoView({ behavior: "smooth", block: "start" });
   if (window.lucide) lucide.createIcons();
 }
 
@@ -1277,7 +1490,9 @@ function getSheetUrl() {
 function saveSheetUrl() {
   const url = elements.sheetWebAppUrl.value.trim();
   if (url && !url.startsWith("https://script.google.com/")) {
-    showToast("The Google Apps Script Web App URL must start with https://script.google.com/.");
+    showToast(
+      "The Google Apps Script Web App URL must start with https://script.google.com/.",
+    );
     return;
   }
   localStorage.setItem(sheetUrlStorageKey, url);
@@ -1295,7 +1510,7 @@ function sheetPayload(client, eventType, extra = {}) {
       ...client,
       receivedAmount: receivedFor(client),
       pendingAmount: pendingFor(client),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     },
     client: {
       id: client.id,
@@ -1313,9 +1528,9 @@ function sheetPayload(client, eventType, extra = {}) {
       nutritionist: client.nutritionist,
       lifecycle: lifecycleFor(client),
       paymentMode: client.paymentMode,
-      notes: client.notes || ""
+      notes: client.notes || "",
     },
-    extra
+    extra,
   };
 }
 
@@ -1327,7 +1542,7 @@ async function syncClientToSheet(client, eventType, extra = {}) {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(sheetPayload(client, eventType, extra))
+      body: JSON.stringify(sheetPayload(client, eventType, extra)),
     });
     elements.syncStatus.textContent = "Synced";
     elements.syncStatus.className = "badge success";
@@ -1335,7 +1550,9 @@ async function syncClientToSheet(client, eventType, extra = {}) {
   } catch {
     elements.syncStatus.textContent = "Sync failed";
     elements.syncStatus.className = "badge danger";
-    showToast("Google Sheet sync failed. Please verify the URL and deployment.");
+    showToast(
+      "Google Sheet sync failed. Please verify the URL and deployment.",
+    );
     return false;
   }
 }
@@ -1359,18 +1576,23 @@ async function loadSheetClients({ silent = false } = {}) {
     }
 
     clients = remoteClients.map(normalizeClient);
-    const keepSelected = clients.some((client) => client.id === selectedClientId);
+    const keepSelected = clients.some(
+      (client) => client.id === selectedClientId,
+    );
     selectedClientId = keepSelected ? selectedClientId : clients[0]?.id || "";
     lastSavedClientId = "";
-    saveClients();
+    if (!(await saveClients())) return;
     render();
-    if (!silent) showToast(`Loaded ${clients.length} clients from Google Sheet.`);
+    if (!silent)
+      showToast(`Loaded ${clients.length} clients from Google Sheet.`);
     return true;
   } catch {
     if (!silent) {
       elements.syncStatus.textContent = "Sync failed";
       elements.syncStatus.className = "badge danger";
-      showToast("Google Sheet import failed. Please verify the URL and deployment.");
+      showToast(
+        "Google Sheet import failed. Please verify the URL and deployment.",
+      );
     }
     return false;
   }
@@ -1389,7 +1611,9 @@ async function syncAllToSheet() {
 }
 
 function exportData() {
-  const blob = new Blob([JSON.stringify(clients, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(clients, null, 2)], {
+    type: "application/json",
+  });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = `pdc-dashboard-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -1402,13 +1626,13 @@ function importData(event) {
   const file = event.target.files?.[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
       const imported = JSON.parse(reader.result);
       if (!Array.isArray(imported)) throw new Error("Invalid data");
       clients = imported.map(normalizeClient);
       selectedClientId = clients[0]?.id || "";
-      saveClients();
+      if (!(await saveClients())) return;
       render();
       showToast("Data imported successfully.");
     } catch {
@@ -1430,27 +1654,48 @@ async function enableNotifications() {
     return;
   }
 
-  const urgentMeetings = clients.filter((client) => client.status === "Active" && nextMeetingFor(client) && dateDiffInDays(nextMeetingFor(client).date) <= 1);
-  const urgentRenewals = clients.filter((client) => client.status === "Active" && renewalDaysFor(client) >= 0 && renewalDaysFor(client) <= 1);
-  const urgentFollowUps = clients.filter((client) => client.status === "Interested" && client.followUpDate && dateDiffInDays(client.followUpDate) <= 1);
-  if (urgentMeetings.length === 0 && urgentRenewals.length === 0 && urgentFollowUps.length === 0) {
-    new Notification("PDC Dashboard", { body: "No meetings, renewals, or follow-ups due today or tomorrow." });
+  const urgentMeetings = clients.filter(
+    (client) =>
+      client.status === "Active" &&
+      nextMeetingFor(client) &&
+      dateDiffInDays(nextMeetingFor(client).date) <= 1,
+  );
+  const urgentRenewals = clients.filter(
+    (client) =>
+      client.status === "Active" &&
+      renewalDaysFor(client) >= 0 &&
+      renewalDaysFor(client) <= 1,
+  );
+  const urgentFollowUps = clients.filter(
+    (client) =>
+      client.status === "Interested" &&
+      client.followUpDate &&
+      dateDiffInDays(client.followUpDate) <= 1,
+  );
+  if (
+    urgentMeetings.length === 0 &&
+    urgentRenewals.length === 0 &&
+    urgentFollowUps.length === 0
+  ) {
+    new Notification("PDC Dashboard", {
+      body: "No meetings, renewals, or follow-ups due today or tomorrow.",
+    });
     return;
   }
   urgentMeetings.slice(0, 3).forEach((client) => {
     const next = nextMeetingFor(client);
     new Notification(`PDC reminder: ${client.name}`, {
-      body: `${formatDate(next.date)} meeting · Pending ${formatCurrency(pendingFor(client))}`
+      body: `${formatDate(next.date)} meeting · Pending ${formatCurrency(pendingFor(client))}`,
     });
   });
   urgentRenewals.slice(0, 2).forEach((client) => {
     new Notification(`Renewal reminder: ${client.name}`, {
-      body: `${formatDate(client.endDate)} plan end date`
+      body: `${formatDate(client.endDate)} plan end date`,
     });
   });
   urgentFollowUps.slice(0, 2).forEach((client) => {
     new Notification(`Follow-up reminder: ${client.name}`, {
-      body: `${formatDate(client.followUpDate)} interested-client follow-up`
+      body: `${formatDate(client.followUpDate)} interested-client follow-up`,
     });
   });
 }
@@ -1459,7 +1704,10 @@ function showToast(message) {
   elements.toast.textContent = message;
   elements.toast.classList.add("show");
   window.clearTimeout(showToast.timeout);
-  showToast.timeout = window.setTimeout(() => elements.toast.classList.remove("show"), 2600);
+  showToast.timeout = window.setTimeout(
+    () => elements.toast.classList.remove("show"),
+    2600,
+  );
 }
 
 function switchView(viewId) {
@@ -1468,17 +1716,38 @@ function switchView(viewId) {
     clients: "view-clients",
     history: "view-history",
     payments: "view-payments",
-    reminders: "view-reminders"
+    reminders: "view-reminders",
   };
-  const resolvedViewId = viewAliases[viewId] || viewId;
+  let resolvedViewId = viewAliases[viewId] || viewId;
+  if (
+    currentUser?.role === "salesperson" &&
+    !["view-crm", "view-sales-reports"].includes(resolvedViewId)
+  )
+    resolvedViewId = "view-crm";
+  if (
+    currentUser?.role === "nutritionist" &&
+    ![
+      "view-overview",
+      "view-clients",
+      "view-history",
+      "view-reminders",
+    ].includes(resolvedViewId)
+  )
+    resolvedViewId = "view-clients";
 
-  document.querySelectorAll(".page-section").forEach((sec) => sec.classList.remove("active"));
-  document.querySelectorAll(".nav-links a").forEach((link) => link.classList.remove("active"));
+  document
+    .querySelectorAll(".page-section")
+    .forEach((sec) => sec.classList.remove("active"));
+  document
+    .querySelectorAll(".nav-links a")
+    .forEach((link) => link.classList.remove("active"));
 
   const section = document.getElementById(resolvedViewId);
   if (section) section.classList.add("active");
 
-  const navLink = document.querySelector(`.nav-links a[data-view="${resolvedViewId}"]`);
+  const navLink = document.querySelector(
+    `.nav-links a[data-view="${resolvedViewId}"]`,
+  );
   if (navLink) navLink.classList.add("active");
   if (window.location.hash !== `#${resolvedViewId}`) {
     history.replaceState(null, "", `#${resolvedViewId}`);
@@ -1503,17 +1772,34 @@ function bindEvents() {
   document.querySelector("#newClientButton").addEventListener("click", () => {
     switchView("view-clients");
     resetForm();
-    document.querySelector(".form-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+    document
+      .querySelector(".form-panel")
+      .scrollIntoView({ behavior: "smooth", block: "start" });
   });
-  document.querySelector("#resetFormButton").addEventListener("click", resetForm);
+  document
+    .querySelector("#resetFormButton")
+    .addEventListener("click", resetForm);
   document.querySelector("#exportButton").addEventListener("click", exportData);
   document.querySelector("#importFile").addEventListener("change", importData);
-  document.querySelector("#saveSheetUrlButton").addEventListener("click", saveSheetUrl);
-  document.querySelector("#loadSheetButton").addEventListener("click", loadSheetClients);
-  document.querySelector("#syncAllButton").addEventListener("click", syncAllToSheet);
-  document.querySelector("#notifyButton").addEventListener("click", enableNotifications);
-  document.querySelector("#printButton").addEventListener("click", () => window.print());
-  elements.overviewNutritionist.addEventListener("change", renderNutritionistOverview);
+  document
+    .querySelector("#saveSheetUrlButton")
+    .addEventListener("click", saveSheetUrl);
+  document
+    .querySelector("#loadSheetButton")
+    .addEventListener("click", loadSheetClients);
+  document
+    .querySelector("#syncAllButton")
+    .addEventListener("click", syncAllToSheet);
+  document
+    .querySelector("#notifyButton")
+    .addEventListener("click", enableNotifications);
+  document
+    .querySelector("#printButton")
+    .addEventListener("click", () => window.print());
+  elements.overviewNutritionist.addEventListener(
+    "change",
+    renderNutritionistOverview,
+  );
   elements.searchInput.addEventListener("input", renderClients);
   elements.statusFilter.addEventListener("change", renderClients);
   elements.detailClientSelect.addEventListener("change", (event) => {
@@ -1523,11 +1809,19 @@ function bindEvents() {
   });
   document.body.addEventListener("click", handleAction);
   elements.startDate.addEventListener("change", () => {
-    elements.endDate.value = planEndDate(elements.startDate.value, elements.planMonths.value);
-    if (!elements.meetingDate.value) elements.meetingDate.value = elements.startDate.value;
+    elements.endDate.value = planEndDate(
+      elements.startDate.value,
+      elements.planMonths.value,
+    );
+    if (!elements.meetingDate.value)
+      elements.meetingDate.value = elements.startDate.value;
   });
   elements.planMonths.addEventListener("change", () => {
-    if (elements.startDate.value) elements.endDate.value = planEndDate(elements.startDate.value, elements.planMonths.value);
+    if (elements.startDate.value)
+      elements.endDate.value = planEndDate(
+        elements.startDate.value,
+        elements.planMonths.value,
+      );
   });
 
   window.addEventListener("hashchange", () => {
@@ -1548,7 +1842,7 @@ Object.assign(window, {
   loadSheetClients,
   shareNutritionistMeetings,
   switchView,
-  syncAllToSheet
+  syncAllToSheet,
 });
 
 bindEvents();
@@ -1556,4 +1850,3 @@ applyAuthState();
 resetForm();
 switchView(window.location.hash.replace("#", "") || "view-overview");
 render();
-if (getSheetUrl()) loadSheetClients({ silent: true });

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PDC Client Dashboard</title>
     <link rel="stylesheet" href="./styles.css?v=20260626-5" />
-    <script src="./seed-data.js?v=20260625-2"></script>
+    <link rel="stylesheet" href="./crm.css?v=2" />
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   </head>
   <body class="auth-pending">
@@ -19,8 +19,16 @@
             <span>Secure dashboard access</span>
           </div>
         </div>
-        <img class="login-food login-food-left" src="./assets/login-food.webp" alt="" />
-        <img class="login-food login-food-right" src="./assets/login-food.webp" alt="" />
+        <img
+          class="login-food login-food-left"
+          src="./assets/login-food.webp"
+          alt=""
+        />
+        <img
+          class="login-food login-food-right"
+          src="./assets/login-food.webp"
+          alt=""
+        />
 
         <form class="login-card" id="loginForm">
           <div class="login-heading">
@@ -30,13 +38,32 @@
 
           <label class="login-field">
             <i data-lucide="mail"></i>
-            <input id="loginEmail" type="email" autocomplete="username" placeholder="Jigneshcfl01@gmail.com" value="Jigneshcfl01@gmail.com" required />
+            <input
+              id="loginEmail"
+              type="email"
+              autocomplete="username"
+              placeholder="Jigneshcfl01@gmail.com"
+              value="Jigneshcfl01@gmail.com"
+              required
+            />
           </label>
 
           <label class="login-field">
             <i data-lucide="lock-keyhole"></i>
-            <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" required />
-            <button class="password-toggle" id="passwordToggle" type="button" aria-label="Show password" title="Show password">
+            <input
+              id="loginPassword"
+              type="password"
+              autocomplete="current-password"
+              placeholder="Password"
+              required
+            />
+            <button
+              class="password-toggle"
+              id="passwordToggle"
+              type="button"
+              aria-label="Show password"
+              title="Show password"
+            >
               <i data-lucide="eye"></i>
             </button>
           </label>
@@ -46,7 +73,9 @@
               <input id="rememberLogin" type="checkbox" checked />
               Remember me
             </label>
-            <button id="forgotPasswordButton" type="button">Forgot Password?</button>
+            <button id="forgotPasswordButton" type="button">
+              Forgot Password?
+            </button>
           </div>
 
           <button class="login-submit" type="submit">Login</button>
@@ -64,11 +93,47 @@
       </div>
 
       <nav class="nav-links" aria-label="Main sections">
-        <a href="#view-overview" class="active" data-view="view-overview" onclick="event.stopImmediatePropagation(); switchView('view-overview'); return false;"><i data-lucide="layout-dashboard"></i><span>Overview</span></a>
-        <a href="#view-clients" data-view="view-clients" onclick="event.stopImmediatePropagation(); switchView('view-clients'); return false;"><i data-lucide="users"></i><span>Clients</span></a>
-        <a href="#view-payments" data-view="view-payments" onclick="event.stopImmediatePropagation(); switchView('view-payments'); return false;"><i data-lucide="wallet-cards"></i><span>Payments</span></a>
-        <a href="#view-history" data-view="view-history" onclick="event.stopImmediatePropagation(); switchView('view-history'); return false;"><i data-lucide="history"></i><span>History</span></a>
-        <a href="#view-reminders" data-view="view-reminders" onclick="event.stopImmediatePropagation(); switchView('view-reminders'); return false;"><i data-lucide="bell-ring"></i><span>Reminders</span></a>
+        <a
+          href="#view-overview"
+          class="active"
+          data-view="view-overview"
+          onclick="event.stopImmediatePropagation(); switchView('view-overview'); return false;"
+          ><i data-lucide="layout-dashboard"></i><span>Overview</span></a
+        >
+        <a
+          href="#view-clients"
+          data-view="view-clients"
+          onclick="event.stopImmediatePropagation(); switchView('view-clients'); return false;"
+          ><i data-lucide="users"></i><span>Clients</span></a
+        >
+        <a
+          href="#view-payments"
+          data-view="view-payments"
+          onclick="event.stopImmediatePropagation(); switchView('view-payments'); return false;"
+          ><i data-lucide="wallet-cards"></i><span>Payments</span></a
+        >
+        <a
+          href="#view-history"
+          data-view="view-history"
+          onclick="event.stopImmediatePropagation(); switchView('view-history'); return false;"
+          ><i data-lucide="history"></i><span>History</span></a
+        >
+        <a
+          href="#view-reminders"
+          data-view="view-reminders"
+          onclick="event.stopImmediatePropagation(); switchView('view-reminders'); return false;"
+          ><i data-lucide="bell-ring"></i><span>Reminders</span></a
+        >
+        <a href="#view-crm" data-view="view-crm"
+          ><i data-lucide="phone"></i><span>CRM</span></a
+        >
+        <a href="#view-sales-reports" data-view="view-sales-reports"
+          ><i data-lucide="chart-no-axes-combined"></i
+          ><span>Sales Reports</span></a
+        >
+        <a href="#view-team" data-view="view-team"
+          ><i data-lucide="users-round"></i><span>Team</span></a
+        >
       </nav>
 
       <div class="sidebar-footer">
@@ -82,16 +147,37 @@
         <div>
           <p class="eyebrow">Personal Diet Counselling</p>
           <h2>PDC Operations Dashboard</h2>
+          <span id="signedInUser"></span>
         </div>
         <div class="topbar-actions">
-          <button class="icon-button" id="notifyButton" type="button" title="Enable notifications" aria-label="Enable notifications" onclick="event.stopImmediatePropagation(); enableNotifications(); return false;">
+          <button class="ghost-button" type="button" data-crm="change-password">
+            My password
+          </button>
+          <button
+            class="icon-button"
+            id="notifyButton"
+            type="button"
+            title="Enable notifications"
+            aria-label="Enable notifications"
+            onclick="event.stopImmediatePropagation(); enableNotifications(); return false;"
+          >
             <i data-lucide="bell"></i>
           </button>
-          <button class="ghost-button" id="logoutButton" type="button" onclick="event.stopImmediatePropagation(); logoutDashboard(); return false;">
+          <button
+            class="ghost-button"
+            id="logoutButton"
+            type="button"
+            onclick="event.stopImmediatePropagation(); logoutDashboard(); return false;"
+          >
             <i data-lucide="log-out"></i>
             Logout
           </button>
-          <button class="ghost-button" id="exportButton" type="button" onclick="event.stopImmediatePropagation(); exportData(); return false;">
+          <button
+            class="ghost-button"
+            id="exportButton"
+            type="button"
+            onclick="event.stopImmediatePropagation(); exportData(); return false;"
+          >
             <i data-lucide="download"></i>
             Export
           </button>
@@ -100,13 +186,22 @@
             Import
             <input id="importFile" type="file" accept="application/json" />
           </label>
-          <button class="primary-button" id="newClientButton" type="button" onclick="event.stopImmediatePropagation(); switchView('view-clients'); resetForm(); document.querySelector('.form-panel').scrollIntoView({ behavior: 'smooth', block: 'start' }); return false;">
+          <button
+            class="primary-button"
+            id="newClientButton"
+            type="button"
+            onclick="event.stopImmediatePropagation(); switchView('view-clients'); resetForm(); document.querySelector('.form-panel').scrollIntoView({ behavior: 'smooth', block: 'start' }); return false;"
+          >
             <i data-lucide="user-plus"></i>
             New Client
           </button>
         </div>
       </header>
 
+      <div id="crmStatus" role="status"></div>
+      <div id="view-crm" class="page-section"></div>
+      <div id="view-sales-reports" class="page-section"></div>
+      <div id="view-team" class="page-section"></div>
       <div id="view-overview" class="page-section active">
         <section class="panel sync-panel" aria-labelledby="syncTitle">
           <div class="panel-heading">
@@ -119,24 +214,46 @@
           <div class="sync-row">
             <label>
               Apps Script Web App URL
-              <input id="sheetWebAppUrl" placeholder="https://script.google.com/macros/s/..." />
+              <input
+                id="sheetWebAppUrl"
+                placeholder="https://script.google.com/macros/s/..."
+              />
             </label>
-            <button class="ghost-button" id="saveSheetUrlButton" type="button" onclick="event.stopImmediatePropagation(); saveSheetUrl(); return false;">
+            <button
+              class="ghost-button"
+              id="saveSheetUrlButton"
+              type="button"
+              onclick="event.stopImmediatePropagation(); saveSheetUrl(); return false;"
+            >
               <i data-lucide="link"></i>
               Save URL
             </button>
-            <button class="ghost-button" id="loadSheetButton" type="button" onclick="event.stopImmediatePropagation(); loadSheetClients(); return false;">
+            <button
+              class="ghost-button"
+              id="loadSheetButton"
+              type="button"
+              onclick="event.stopImmediatePropagation(); loadSheetClients(); return false;"
+            >
               <i data-lucide="download"></i>
               Load Sheet
             </button>
-            <button class="primary-button" id="syncAllButton" type="button" onclick="event.stopImmediatePropagation(); syncAllToSheet(); return false;">
+            <button
+              class="primary-button"
+              id="syncAllButton"
+              type="button"
+              onclick="event.stopImmediatePropagation(); syncAllToSheet(); return false;"
+            >
               <i data-lucide="refresh-cw"></i>
               Sync All
             </button>
           </div>
         </section>
 
-        <section id="overview" class="overview-grid" aria-label="Dashboard summary">
+        <section
+          id="overview"
+          class="overview-grid"
+          aria-label="Dashboard summary"
+        >
           <article class="metric accent-teal">
             <p>Total Clients</p>
             <strong id="totalClients">0</strong>
@@ -159,11 +276,16 @@
           </article>
         </section>
 
-        <section class="panel nutritionist-overview" aria-labelledby="nutritionistOverviewTitle">
+        <section
+          class="panel nutritionist-overview"
+          aria-labelledby="nutritionistOverviewTitle"
+        >
           <div class="panel-heading">
             <div>
               <p class="eyebrow">Nutritionist overview</p>
-              <h3 id="nutritionistOverviewTitle">Client Performance by Nutritionist</h3>
+              <h3 id="nutritionistOverviewTitle">
+                Client Performance by Nutritionist
+              </h3>
             </div>
             <label class="compact-select">
               Nutritionist
@@ -174,7 +296,10 @@
             </label>
           </div>
 
-          <div class="overview-mini-grid" aria-label="Selected nutritionist summary">
+          <div
+            class="overview-mini-grid"
+            aria-label="Selected nutritionist summary"
+          >
             <article>
               <span>Total Clients</span>
               <strong id="nutritionistTotalClients">0</strong>
@@ -198,23 +323,40 @@
               <p class="eyebrow">Client details</p>
               <h3 id="nutritionistClientTitle">Dr Luv Patel Clients</h3>
             </div>
-            <button class="primary-button small" id="shareNutritionistMeetingsButton" type="button" onclick="event.stopImmediatePropagation(); shareNutritionistMeetings(); return false;">
+            <button
+              class="primary-button small"
+              id="shareNutritionistMeetingsButton"
+              type="button"
+              onclick="event.stopImmediatePropagation(); shareNutritionistMeetings(); return false;"
+            >
               <i data-lucide="message-circle"></i>
               Share Monthly Meeting List
             </button>
           </div>
-          <div class="nutritionist-client-list" id="nutritionistClientList"></div>
+          <div
+            class="nutritionist-client-list"
+            id="nutritionistClientList"
+          ></div>
         </section>
       </div>
 
       <div id="view-reminders" class="page-section">
-        <section id="reminders" class="panel reminder-panel" aria-labelledby="reminderTitle">
+        <section
+          id="reminders"
+          class="panel reminder-panel"
+          aria-labelledby="reminderTitle"
+        >
           <div class="panel-heading">
             <div>
               <p class="eyebrow">Action required</p>
               <h3 id="reminderTitle">Meeting & Follow-up Reminders</h3>
             </div>
-            <button class="ghost-button small" id="printButton" type="button" onclick="event.stopImmediatePropagation(); window.print(); return false;">
+            <button
+              class="ghost-button small"
+              id="printButton"
+              type="button"
+              onclick="event.stopImmediatePropagation(); window.print(); return false;"
+            >
               <i data-lucide="printer"></i>
               Print
             </button>
@@ -226,251 +368,324 @@
       <div id="view-clients" class="page-section">
         <div class="clients-layout">
           <section class="panel form-panel" aria-labelledby="clientFormTitle">
-          <div class="panel-heading">
-            <div>
-              <p class="eyebrow">Entry</p>
-              <h3 id="clientFormTitle">Add / Update Client</h3>
-            </div>
-            <button class="icon-button subtle" id="resetFormButton" type="button" title="Clear form" aria-label="Clear form" onclick="event.stopImmediatePropagation(); resetForm(); return false;">
-              <i data-lucide="rotate-ccw"></i>
-            </button>
-          </div>
-
-          <form id="clientForm" class="client-form" novalidate>
-            <input type="hidden" id="clientId" />
-
-            <label>
-              Client Name
-              <input id="clientName" required placeholder="e.g. Riya Sharma" />
-            </label>
-            <label>
-              Mobile Number
-              <input id="phone" required placeholder="e.g. 9876543210" inputmode="tel" />
-            </label>
-
-            <div class="field-row">
-              <label>
-                Plan Months
-                <select id="planMonths" required>
-                  <option value="1">One Time</option>
-                  <option value="3" selected>3 Month</option>
-                  <option value="6">6 Month</option>
-                  <option value="12">12 Month</option>
-                </select>
-              </label>
-              <label>
-                Service Amount
-                <input id="serviceAmount" required type="number" min="0" value="0" />
-              </label>
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Entry</p>
+                <h3 id="clientFormTitle">Add / Update Client</h3>
+              </div>
+              <button
+                class="icon-button subtle"
+                id="resetFormButton"
+                type="button"
+                title="Clear form"
+                aria-label="Clear form"
+                onclick="event.stopImmediatePropagation(); resetForm(); return false;"
+              >
+                <i data-lucide="rotate-ccw"></i>
+              </button>
             </div>
 
-            <label>
-              Nutritionist
-              <select id="nutritionist" required>
-                <option value="Dr Luv Patel">Dr Luv Patel</option>
-                <option value="Dt Nilesh Lakhani">Dt Nilesh Lakhani</option>
-              </select>
-            </label>
+            <form id="clientForm" class="client-form" novalidate>
+              <input type="hidden" id="clientId" />
 
-            <div class="field-row">
               <label>
-                Start Date
-                <input id="startDate" required type="date" />
+                Client Name
+                <input
+                  id="clientName"
+                  required
+                  placeholder="e.g. Riya Sharma"
+                />
               </label>
               <label>
-                End Date
-                <input id="endDate" required type="date" />
+                Mobile Number
+                <input
+                  id="phone"
+                  required
+                  placeholder="e.g. 9876543210"
+                  inputmode="tel"
+                />
               </label>
-            </div>
 
-            <div class="field-row">
-              <label>
-                Next PDC Meeting
-                <input id="meetingDate" required type="date" />
-              </label>
-              <label>
-                Payment Mode
-                <select id="paymentMode">
-                  <option value="Online">Online</option>
-                  <option value="Cash">Cash</option>
-                  <option value="UPI">UPI</option>
-                  <option value="Card">Card</option>
-                </select>
-              </label>
-            </div>
-
-            <div class="field-row">
-              <label>
-                Payment Received
-                <input id="receivedAmount" required type="number" min="0" value="0" />
-              </label>
-              <label>
-                Status
-                <select id="status">
-                  <option value="Active">Active</option>
-                  <option value="Interested">Interested</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Paused">Paused</option>
-                </select>
-              </label>
-            </div>
-
-            <label>
-              Follow-up Date
-              <input id="followUpDate" type="date" />
-            </label>
-
-            <label>
-              Notes
-              <textarea id="notes" rows="3" placeholder="Diet focus, special condition, follow-up points"></textarea>
-            </label>
-
-            <button class="primary-button full" id="saveClientButton" type="button" onclick="event.stopImmediatePropagation(); handleSubmit(event); return false;">
-              <i data-lucide="save"></i>
-              Save Client
-            </button>
-            <p class="form-note">Monthly PDC schedule is created automatically from the start date and plan duration.</p>
-            <p class="form-status" id="formStatus" aria-live="polite">Ready to save client details.</p>
-            <div class="save-proof" id="saveProof" hidden></div>
-          </form>
-        </section>
-
-      <section id="clients" class="panel data-panel" aria-labelledby="clientsTitle">
-        <div class="panel-heading table-heading">
-          <div>
-            <p class="eyebrow">Database</p>
-            <h3 id="clientsTitle">Client Records</h3>
-          </div>
-          <div class="table-tools">
-            <div class="search-box">
-              <i data-lucide="search"></i>
-              <input id="searchInput" placeholder="Search client, phone, status" />
-            </div>
-            <select id="statusFilter" aria-label="Filter by status">
-              <option value="All">All Status</option>
-              <option value="Active">Active</option>
-              <option value="Interested">Interested</option>
-              <option value="Completed">Completed</option>
-              <option value="Paused">Paused</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Client</th>
-                <th>Nutritionist</th>
-                <th>Plan</th>
-                <th>Next Meeting</th>
-                <th>Follow Up</th>
-                <th>Service</th>
-                <th>Received</th>
-                <th>Pending</th>
-                <th>Mode</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="clientTable"></tbody>
-          </table>
-        </div>
-      </section>
-      </div>
-      </div>
-
-      <div id="view-history" class="page-section">
-      <section id="history" class="panel history-panel" aria-labelledby="historyTitle">
-        <div class="panel-heading table-heading">
-          <div>
-            <p class="eyebrow">Client workflow</p>
-            <h3 id="historyTitle">Meetings, Installments & Renewal</h3>
-          </div>
-          <select id="detailClientSelect" aria-label="Select client for history"></select>
-        </div>
-
-        <div class="detail-summary" id="detailSummary"></div>
-
-        <div class="history-grid">
-          <section class="sub-panel" aria-labelledby="meetingHistoryTitle">
-            <div class="sub-heading">
-              <h4 id="meetingHistoryTitle">Monthly Meeting History</h4>
-              <span class="badge" id="meetingProgress">0/0 done</span>
-            </div>
-            <div id="meetingHistory" class="timeline-list"></div>
-          </section>
-
-          <section class="sub-panel" aria-labelledby="installmentTitle">
-            <div class="sub-heading">
-              <h4 id="installmentTitle">Payment Installments</h4>
-              <span class="badge" id="installmentTotal">₹0</span>
-            </div>
-
-            <form id="paymentForm" class="payment-form" novalidate>
               <div class="field-row">
                 <label>
-                  Date
-                  <input id="paymentDate" type="date" required />
+                  Plan Months
+                  <select id="planMonths" required>
+                    <option value="1">One Time</option>
+                    <option value="3" selected>3 Month</option>
+                    <option value="6">6 Month</option>
+                    <option value="12">12 Month</option>
+                  </select>
                 </label>
                 <label>
-                  Amount
-                  <input id="paymentAmount" type="number" min="1" required placeholder="0" />
+                  Service Amount
+                  <input
+                    id="serviceAmount"
+                    required
+                    type="number"
+                    min="0"
+                    value="0"
+                  />
                 </label>
               </div>
+
+              <label>
+                Nutritionist
+                <select id="nutritionist" required>
+                  <option value="Dr Luv Patel">Dr Luv Patel</option>
+                  <option value="Dt Nilesh Lakhani">Dt Nilesh Lakhani</option>
+                </select>
+              </label>
+
               <div class="field-row">
                 <label>
-                  Mode
-                  <select id="paymentEntryMode">
+                  Start Date
+                  <input id="startDate" required type="date" />
+                </label>
+                <label>
+                  End Date
+                  <input id="endDate" required type="date" />
+                </label>
+              </div>
+
+              <div class="field-row">
+                <label>
+                  Next PDC Meeting
+                  <input id="meetingDate" required type="date" />
+                </label>
+                <label>
+                  Payment Mode
+                  <select id="paymentMode">
                     <option value="Online">Online</option>
                     <option value="Cash">Cash</option>
                     <option value="UPI">UPI</option>
                     <option value="Card">Card</option>
                   </select>
                 </label>
+              </div>
+
+              <div class="field-row">
                 <label>
-                  Note
-                  <input id="paymentNote" placeholder="Receipt / reference" />
+                  Payment Received
+                  <input
+                    id="receivedAmount"
+                    required
+                    type="number"
+                    min="0"
+                    value="0"
+                  />
+                </label>
+                <label>
+                  Status
+                  <select id="status">
+                    <option value="Active">Active</option>
+                    <option value="Interested">Interested</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Paused">Paused</option>
+                  </select>
                 </label>
               </div>
-              <button class="primary-button full" id="addPaymentButton" type="button" onclick="event.stopImmediatePropagation(); addPayment(event); return false;">
-                <i data-lucide="plus"></i>
-                Add Installment
-              </button>
-            </form>
 
-            <div id="paymentHistory" class="timeline-list compact"></div>
+              <label>
+                Follow-up Date
+                <input id="followUpDate" type="date" />
+              </label>
+
+              <label>
+                Notes
+                <textarea
+                  id="notes"
+                  rows="3"
+                  placeholder="Diet focus, special condition, follow-up points"
+                ></textarea>
+              </label>
+
+              <button
+                class="primary-button full"
+                id="saveClientButton"
+                type="button"
+                onclick="event.stopImmediatePropagation(); handleSubmit(event); return false;"
+              >
+                <i data-lucide="save"></i>
+                Save Client
+              </button>
+              <p class="form-note">
+                Monthly PDC schedule is created automatically from the start
+                date and plan duration.
+              </p>
+              <p class="form-status" id="formStatus" aria-live="polite">
+                Ready to save client details.
+              </p>
+              <div class="save-proof" id="saveProof" hidden></div>
+            </form>
+          </section>
+
+          <section
+            id="clients"
+            class="panel data-panel"
+            aria-labelledby="clientsTitle"
+          >
+            <div class="panel-heading table-heading">
+              <div>
+                <p class="eyebrow">Database</p>
+                <h3 id="clientsTitle">Client Records</h3>
+              </div>
+              <div class="table-tools">
+                <div class="search-box">
+                  <i data-lucide="search"></i>
+                  <input
+                    id="searchInput"
+                    placeholder="Search client, phone, status"
+                  />
+                </div>
+                <select id="statusFilter" aria-label="Filter by status">
+                  <option value="All">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Interested">Interested</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Paused">Paused</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Client</th>
+                    <th>Nutritionist</th>
+                    <th>Plan</th>
+                    <th>Next Meeting</th>
+                    <th>Follow Up</th>
+                    <th>Service</th>
+                    <th>Received</th>
+                    <th>Pending</th>
+                    <th>Mode</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="clientTable"></tbody>
+              </table>
+            </div>
           </section>
         </div>
-      </section>
+      </div>
+
+      <div id="view-history" class="page-section">
+        <section
+          id="history"
+          class="panel history-panel"
+          aria-labelledby="historyTitle"
+        >
+          <div class="panel-heading table-heading">
+            <div>
+              <p class="eyebrow">Client workflow</p>
+              <h3 id="historyTitle">Meetings, Installments & Renewal</h3>
+            </div>
+            <select
+              id="detailClientSelect"
+              aria-label="Select client for history"
+            ></select>
+          </div>
+
+          <div class="detail-summary" id="detailSummary"></div>
+
+          <div class="history-grid">
+            <section class="sub-panel" aria-labelledby="meetingHistoryTitle">
+              <div class="sub-heading">
+                <h4 id="meetingHistoryTitle">Monthly Meeting History</h4>
+                <span class="badge" id="meetingProgress">0/0 done</span>
+              </div>
+              <div id="meetingHistory" class="timeline-list"></div>
+            </section>
+
+            <section class="sub-panel" aria-labelledby="installmentTitle">
+              <div class="sub-heading">
+                <h4 id="installmentTitle">Payment Installments</h4>
+                <span class="badge" id="installmentTotal">₹0</span>
+              </div>
+
+              <form id="paymentForm" class="payment-form" novalidate>
+                <div class="field-row">
+                  <label>
+                    Date
+                    <input id="paymentDate" type="date" required />
+                  </label>
+                  <label>
+                    Amount
+                    <input
+                      id="paymentAmount"
+                      type="number"
+                      min="1"
+                      required
+                      placeholder="0"
+                    />
+                  </label>
+                </div>
+                <div class="field-row">
+                  <label>
+                    Mode
+                    <select id="paymentEntryMode">
+                      <option value="Online">Online</option>
+                      <option value="Cash">Cash</option>
+                      <option value="UPI">UPI</option>
+                      <option value="Card">Card</option>
+                    </select>
+                  </label>
+                  <label>
+                    Note
+                    <input id="paymentNote" placeholder="Receipt / reference" />
+                  </label>
+                </div>
+                <button
+                  class="primary-button full"
+                  id="addPaymentButton"
+                  type="button"
+                  onclick="event.stopImmediatePropagation(); addPayment(event); return false;"
+                >
+                  <i data-lucide="plus"></i>
+                  Add Installment
+                </button>
+              </form>
+
+              <div id="paymentHistory" class="timeline-list compact"></div>
+            </section>
+          </div>
+        </section>
       </div>
 
       <div id="view-payments" class="page-section">
-      <section id="payments" class="panel payment-panel" aria-labelledby="paymentsTitle">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">Accounts</p>
-            <h3 id="paymentsTitle">Payment Summary</h3>
-          </div>
-        </div>
-        <div class="payment-grid">
-          <div class="chart-card">
-            <div class="donut" id="paymentDonut" style="--percent: 0">
-              <span id="collectionPercent">0%</span>
-            </div>
+        <section
+          id="payments"
+          class="panel payment-panel"
+          aria-labelledby="paymentsTitle"
+        >
+          <div class="panel-heading">
             <div>
-              <p class="muted">Collection progress</p>
-              <strong id="collectionText">₹0 received of ₹0</strong>
+              <p class="eyebrow">Accounts</p>
+              <h3 id="paymentsTitle">Payment Summary</h3>
             </div>
           </div>
-          <div class="ledger" id="ledgerList"></div>
-        </div>
-      </section>
+          <div class="payment-grid">
+            <div class="chart-card">
+              <div class="donut" id="paymentDonut" style="--percent: 0">
+                <span id="collectionPercent">0%</span>
+              </div>
+              <div>
+                <p class="muted">Collection progress</p>
+                <strong id="collectionText">₹0 received of ₹0</strong>
+              </div>
+            </div>
+            <div class="ledger" id="ledgerList"></div>
+          </div>
+        </section>
       </div>
     </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-    <script src="./app.js?v=20260626-5"></script>
+    <dialog id="crmDialog" aria-labelledby="crmDialogTitle"></dialog>
+    <script src="./app.js?v=2"></script>
+    <script src="./crm.js?v=2"></script>
   </body>
 </html>
