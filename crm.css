@@ -1,0 +1,340 @@
+[hidden] {
+  display: none !important;
+}
+.crm-page-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.crm-page-heading h2 {
+  font-size: 32px;
+  letter-spacing: -0.8px;
+  margin: 0 0 6px;
+}
+.crm-page-heading p {
+  color: var(--muted);
+  margin: 0;
+}
+#signedInUser {
+  font-size: 13px;
+  color: var(--muted);
+}
+.crm-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.crm-metrics article {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 22px;
+}
+.crm-metrics p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.crm-metrics strong {
+  font-size: 30px;
+}
+.crm-panel {
+  padding: 22px;
+  margin-bottom: 24px;
+  box-shadow: none;
+}
+.crm-panel h3 {
+  margin: 0 0 18px;
+  font-size: 20px;
+}
+.crm-filters {
+  display: flex;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.crm-filters label {
+  flex: 1;
+  min-width: 150px;
+  font-size: 13px;
+  color: var(--muted);
+  display: grid;
+  gap: 7px;
+}
+.crm-filters label:first-child {
+  flex: 2;
+}
+.crm-filters input,
+.crm-filters select,
+#crmDialog input,
+#crmDialog select,
+#crmDialog textarea {
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 11px 12px;
+  min-height: 43px;
+}
+.crm-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.crm-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px;
+  font-size: 14px;
+}
+.crm-table th {
+  background: #f3f6f5;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+.crm-table td,
+.crm-table th {
+  padding: 15px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.crm-table tr:last-child td {
+  border-bottom: 0;
+}
+.crm-table small {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+  font-size: 12px;
+}
+.crm-table a {
+  color: var(--teal);
+  text-decoration: none;
+}
+.crm-table .crm-empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--muted);
+}
+.crm-empty strong {
+  font-size: 17px;
+  color: var(--ink);
+}
+.crm-empty p {
+  margin-bottom: 0;
+}
+.crm-stage {
+  font-size: 12px;
+  background: var(--surface-soft);
+  color: var(--teal-dark);
+  padding: 5px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.crm-row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.crm-row-actions button {
+  white-space: nowrap;
+  font-size: 13px;
+  padding: 9px 12px;
+}
+.crm-overdue {
+  color: var(--rose);
+  font-weight: 600;
+}
+.crm-help {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.8;
+  margin-bottom: 0;
+}
+#crmDialog {
+  width: min(760px, calc(100vw - 32px));
+  max-height: 90vh;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 26px;
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+#crmDialog::backdrop {
+  background: rgba(23, 33, 31, 0.4);
+}
+.crm-dialog-heading,
+.crm-dialog-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.crm-dialog-heading {
+  margin-bottom: 22px;
+}
+.crm-dialog-heading h3 {
+  margin: 0;
+  font-size: 23px;
+}
+.crm-dialog-heading a {
+  color: var(--teal);
+}
+.crm-dialog-footer {
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+.crm-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+#crmDialog label {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+}
+#crmDialog label:has(textarea) {
+  grid-column: 1/-1;
+}
+#crmDialog .crm-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+#crmDialog .crm-checkbox input {
+  width: 18px;
+  min-height: 18px;
+}
+#crmFormError {
+  color: var(--rose);
+  line-height: 1.6;
+}
+.crm-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.crm-detail-grid dt {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.crm-detail-grid dd {
+  margin: 0;
+}
+.crm-purchase {
+  background: var(--surface-soft);
+  padding: 16px;
+  margin-top: 20px;
+  border-radius: 8px;
+}
+.crm-purchase h4 {
+  margin: 0;
+}
+.crm-timeline article {
+  border-left: 2px solid var(--line);
+  padding: 0 0 18px 18px;
+  margin-bottom: 12px;
+}
+.crm-timeline small {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.crm-timeline p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.crm-notice {
+  background: #fff6dd;
+  border: 1px solid #e9d6a3;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.crm-login-message {
+  color: var(--rose);
+  font-size: 14px;
+  line-height: 1.6;
+}
+body[data-role="nutritionist"] [data-action],
+body[data-role="nutritionist"] #addPaymentButton {
+  display: none;
+}
+@media (max-width: 900px) {
+  .crm-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .crm-page-heading {
+    align-items: flex-start;
+  }
+  .crm-page-heading h2 {
+    font-size: 27px;
+  }
+  .crm-filters {
+    gap: 12px;
+  }
+}
+@media (max-width: 560px) {
+  .crm-form-grid,
+  .crm-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .crm-page-heading {
+    flex-direction: column;
+  }
+  .crm-panel {
+    padding: 14px;
+  }
+  .crm-metrics {
+    gap: 10px;
+  }
+  .crm-metrics article {
+    padding: 15px;
+  }
+  .crm-metrics strong {
+    font-size: 25px;
+  }
+  #crmDialog {
+    padding: 18px;
+  }
+  .crm-filters label {
+    min-width: 120px;
+  }
+  .crm-page-heading p {
+    font-size: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-section {
+    animation: none;
+  }
+}
+
+.crm-periods {
+  margin-bottom: 18px;
+}
+.crm-row-actions .primary-button {
+  background: var(--teal);
+  box-shadow: none;
+}
+@media (max-width: 560px) {
+  .crm-table:has(.crm-empty) { min-width: 0; }
+  .crm-table:has(.crm-empty) th { white-space: normal; font-size: 10px; padding: 10px 6px; }
+  .crm-table:has(.crm-empty) .crm-empty { padding: 36px 14px; }
+}
