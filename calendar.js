@@ -292,7 +292,7 @@ export function createCalendar(
     if (action === "/select") {
       const c = own(u, b.connectionId);
       if (
-        rows("meetings").some((m) => m.connectionId === c.id && !m.cancelled) &&
+        rows("meetings").some((m) => m.connectionId === c.id && (!m.cancelled || m.syncStatus !== "synced")) &&
         c.calendarId !== b.calendarId
       )
         fail(
