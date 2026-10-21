@@ -334,7 +334,92 @@ body[data-role="nutritionist"] #addPaymentButton {
   box-shadow: none;
 }
 @media (max-width: 560px) {
-  .crm-table:has(.crm-empty) { min-width: 0; }
-  .crm-table:has(.crm-empty) th { white-space: normal; font-size: 10px; padding: 10px 6px; }
-  .crm-table:has(.crm-empty) .crm-empty { padding: 36px 14px; }
+  .crm-table:has(.crm-empty) {
+    min-width: 0;
+  }
+  .crm-table:has(.crm-empty) th {
+    white-space: normal;
+    font-size: 10px;
+    padding: 10px 6px;
+  }
+  .crm-table:has(.crm-empty) .crm-empty {
+    padding: 36px 14px;
+  }
+}
+
+.crm-panel,
+.crm-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+.crm-table td {
+  max-width: 320px;
+  overflow-wrap: anywhere;
+}
+.crm-table td:has(strong) {
+  min-width: 140px;
+}
+#reportTable .crm-table td {
+  min-width: 95px;
+}
+#reportTable .crm-table td:nth-last-child(2) {
+  white-space: pre-wrap;
+}
+.crm-dialog-heading h3 {
+  overflow-wrap: anywhere;
+}
+.crm-metrics strong {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 560px) {
+  .crm-dialog-heading {
+    align-items: flex-start;
+  }
+  .crm-metrics strong {
+    font-size: 22px;
+  }
+}
+#reportTable .crm-table td:first-child {
+  min-width: 160px;
+}
+@media (max-width: 820px) {
+  .nav-links {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .nav-links a {
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 4px;
+    font-size: 12px;
+  }
+  .nav-links span {
+    display: inline;
+  }
+  .nav-links svg {
+    width: 19px;
+    height: 19px;
+  }
+  .sidebar {
+    gap: 18px;
+  }
+}
+.crm-table {
+  width: max-content;
+  min-width: 100%;
+}
+.crm-table td {
+  min-width: 110px;
+}
+@media (max-width: 560px) {
+  .crm-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .crm-filters label,
+  .crm-filters input,
+  .crm-filters select {
+    min-width: 0;
+    width: 100%;
+  }
 }

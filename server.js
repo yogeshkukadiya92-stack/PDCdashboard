@@ -1,4 +1,4 @@
-import { createCallFlowApi } from './callflow-api.js';
+import { createCallFlowApi } from "./callflow-api.js";
 import http from "node:http";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -17,6 +17,10 @@ import {
   outcomes,
   salesReport,
   phoneKey,
+  validateService,
+  callDuration,
+  analyticsReport,
+  validDate,
 } from "./crm-domain.js";
 const root = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = process.env.DATA_DIR || path.join(root, "data");
@@ -68,6 +72,129 @@ function transaction(fn) {
     db.exec("ROLLBACK");
     throw e;
   }
+}
+// Idempotent migration: keep existing counselling purchases and their reporting attribution.
+transaction(() => {
+  if (!record("services", "pdc"))
+    put("services", {
+      id: "pdc",
+      name: "PDC counselling",
+      kind: "pdc",
+      price: 0,
+      months: 3,
+      deliveryOwner: "",
+      description: "Personal diet counselling",
+      active: true,
+      createdAt: now(),
+      updatedAt: now(),
+    });
+  for (const lead of rows("leads")) {
+    if (lead.serviceId) continue;
+    const name = String(lead.service || "PDC counselling").trim();
+    let service = rows("services").find(
+      (s) => s.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (/^pdc(?: counselling)?$/i.test(name))
+      service = record("services", "pdc");
+    if (!service) {
+      service = { ...record("services", "pdc"), id: randomUUID(), name };
+      put("services", service);
+    }
+    put("leads", { ...lead, serviceId: service.id, service: service.name });
+  }
+  for (const kind of ["calls", "sales"])
+    for (const item of rows(kind)) {
+      const lead = record("leads", item.leadId);
+      if (lead && !item.serviceId)
+        put(kind, {
+          ...item,
+          serviceId: lead.serviceId,
+          serviceName: lead.service,
+          sourceName: lead.source,
+          ...(kind === "sales" ? { serviceKind: "pdc" } : {}),
+        });
+    }
+});
+function activity(u, lead, type, text) {
+  put("activities", {
+    id: randomUUID(),
+    leadId: lead.id,
+    actorId: u.id,
+    actorName: u.name,
+    serviceId: lead.serviceId,
+    sourceName: lead.source,
+    type,
+    text,
+    createdAt: now(),
+  });
+}
+function serviceFor(input, existing = null) {
+  let service = input.serviceId
+    ? record("services", input.serviceId)
+    : rows("services").find(
+        (s) =>
+          s.name.toLowerCase() ===
+          String(input.service || "")
+            .trim()
+            .toLowerCase(),
+      );
+  if (
+    !service &&
+    !input.serviceId &&
+    (!input.service || /^pdc(?: counselling)?$/i.test(input.service))
+  )
+    service = record("services", "pdc");
+  if (!service || (!service.active && existing?.serviceId !== service.id))
+    fail("Choose an active service from Services.");
+  return service;
+}
+function prepareLead(u, input, existing = null) {
+  const service = serviceFor(input, existing);
+  const lead = validateLead({
+    ...input,
+    serviceId: service.id,
+    service: service.name,
+    assignedTo:
+      u.role === "salesperson"
+        ? existing?.assignedTo || u.id
+        : input.assignedTo,
+  });
+  if (
+    lead.assignedTo &&
+    !db
+      .prepare(
+        "SELECT id FROM users WHERE id=? AND role='salesperson' AND active=1",
+      )
+      .get(lead.assignedTo)
+  )
+    fail("Choose an active salesperson.");
+  if (
+    rows("leads").some(
+      (l) =>
+        l.id !== existing?.id &&
+        phoneKey(l.phone) === lead.phone &&
+        l.serviceId === lead.serviceId,
+    )
+  )
+    fail("This mobile number already has a lead for this service.", 409);
+  return lead;
+}
+function createLead(u, input) {
+  const value = {
+    ...prepareLead(u, input),
+    id: randomUUID(),
+    createdAt: now(),
+    updatedAt: now(),
+  };
+  put("leads", value);
+  activity(
+    u,
+    value,
+    "created",
+    `Lead added from ${value.source} for ${value.service}. Assigned to ${db.prepare("SELECT name FROM users WHERE id=?").get(value.assignedTo)?.name || "Unassigned"}.`,
+  );
+  audit(u, "lead_created", value.id);
+  return value;
 }
 function passwordHash(password) {
   const salt = randomBytes(16).toString("hex");
@@ -195,6 +322,20 @@ function snapshot(u) {
     leads,
     calls: rows("calls").filter((c) => ids.has(c.leadId)),
     sales,
+    services: u.role === "nutritionist" ? [] : rows("services"),
+    nutritionists: [
+      ...new Set([
+        "Dr Luv Patel",
+        "Dt Nilesh Lakhani",
+        ...db
+          .prepare(
+            "SELECT name FROM users WHERE role='nutritionist' AND active=1",
+          )
+          .all()
+          .map((u) => u.name),
+      ]),
+    ],
+    activities: rows("activities").filter((a) => ids.has(a.leadId)),
     clients:
       u.role === "admin"
         ? rows("clients")
@@ -216,7 +357,17 @@ const staticFiles = new Set([
   "styles.css",
   "crm.css",
 ]);
-const callflow = createCallFlowApi({ db, rows, record, put, transaction, audit, verify, body, fail });
+const callflow = createCallFlowApi({
+  db,
+  rows,
+  record,
+  put,
+  transaction,
+  audit,
+  verify,
+  body,
+  fail,
+});
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   const p = url.pathname;
@@ -316,11 +467,13 @@ const server = http.createServer(async (req, res) => {
         const created = transaction(() => {
           if (
             b.role === "nutritionist" &&
-            !["Dr Luv Patel", "Dt Nilesh Lakhani"].includes(b.name)
+            db
+              .prepare(
+                "SELECT id FROM users WHERE role='nutritionist' AND lower(name)=lower(?)",
+              )
+              .get(String(b.name || "").trim())
           )
-            fail(
-              "Use the assigned nutritionist name: Dr Luv Patel or Dt Nilesh Lakhani.",
-            );
+            fail("A nutritionist account with this name already exists.", 409);
           const user = addUser(b);
           audit(u, "user_created", user.id);
           return user;
@@ -361,53 +514,136 @@ const server = http.createServer(async (req, res) => {
         });
         return json({ ok: true });
       }
-      if (p === "/api/reports" && req.method === "GET") {
-        if (u.role === "nutritionist")
-          fail("Sales report access required.", 403);
-        const users = db.prepare("SELECT * FROM users").all().map(publicUser);
-        return json(
-          salesReport(users, rows("leads"), rows("calls"), rows("sales"), {
-            from: url.searchParams.get("from") || "",
-            to: url.searchParams.get("to") || "",
-            salesperson:
-              u.role === "salesperson"
-                ? u.id
-                : url.searchParams.get("salesperson") || "",
-          }),
-        );
-      }
-      if (p === "/api/leads" && req.method === "POST") {
-        if (u.role === "nutritionist") fail("Sales access required.", 403);
-        const b = await body(req);
-        const lead = validateLead({
-          ...b,
-          assignedTo: u.role === "salesperson" ? u.id : b.assignedTo,
-        });
+      if (p === "/api/services" && req.method === "POST") {
+        admin(u);
+        const input = validateService(await body(req));
         if (
-          lead.assignedTo &&
-          !db
-            .prepare(
-              "SELECT id FROM users WHERE id=? AND role='salesperson' AND active=1",
-            )
-            .get(lead.assignedTo)
+          rows("services").some(
+            (s) => s.name.toLowerCase() === input.name.toLowerCase(),
+          )
         )
-          fail("Choose an active salesperson.");
-        if (rows("leads").some((l) => phoneKey(l.phone) === lead.phone))
-          fail("A lead with this mobile number already exists.", 409);
+          fail("A service with this name already exists.", 409);
         const value = {
-          ...lead,
+          ...input,
           id: randomUUID(),
           createdAt: now(),
           updatedAt: now(),
         };
         transaction(() => {
-          put("leads", value);
-          audit(u, "lead_created", value.id);
+          put("services", value);
+          audit(u, "service_created", value.id);
         });
         return json(value, 201);
       }
+      const serviceMatch = p.match(/^\/api\/services\/([^/]+)$/);
+      if (serviceMatch && req.method === "PATCH") {
+        admin(u);
+        const existing = record("services", serviceMatch[1]);
+        if (!existing) fail("Service not found.", 404);
+        const b = await body(req);
+        if (b.expectedUpdatedAt !== existing.updatedAt)
+          fail("Service changed. Refresh and try again.", 409);
+        const input = validateService({ ...existing, ...b });
+        if (
+          rows("services").some(
+            (s) =>
+              s.id !== existing.id &&
+              s.name.toLowerCase() === input.name.toLowerCase(),
+          )
+        )
+          fail("A service with this name already exists.", 409);
+        if (
+          input.kind !== existing.kind &&
+          rows("sales").some((s) => s.serviceId === existing.id)
+        )
+          fail(
+            "Service type cannot change after purchases have been recorded.",
+          );
+        const value = { ...existing, ...input, updatedAt: now() };
+        transaction(() => {
+          put("services", value);
+          audit(u, "service_updated", value.id);
+        });
+        return json(value);
+      }
+      if (
+        ["/api/reports", "/api/analytics"].includes(p) &&
+        req.method === "GET"
+      ) {
+        if (u.role === "nutritionist")
+          fail("Sales report access required.", 403);
+        const users = db.prepare("SELECT * FROM users").all().map(publicUser);
+        const filters = {
+          from: url.searchParams.get("from") || "",
+          to: url.searchParams.get("to") || "",
+          serviceId: url.searchParams.get("serviceId") || "",
+          source: url.searchParams.get("source") || "",
+          salesperson:
+            u.role === "salesperson"
+              ? u.id
+              : url.searchParams.get("salesperson") || "",
+        };
+        if (p === "/api/reports")
+          return json(
+            salesReport(
+              users,
+              rows("leads"),
+              rows("calls"),
+              rows("sales"),
+              filters,
+            ),
+          );
+        const report = analyticsReport(
+          users,
+          rows("leads"),
+          rows("calls"),
+          rows("sales"),
+          rows("services"),
+          filters,
+          rows("activities"),
+        );
+        // Historical personal totals remain available after reassignment; contact details do not.
+        if (u.role !== "admin") {
+          const assigned = new Set(
+            rows("leads")
+              .filter((l) => l.assignedTo === u.id)
+              .map((l) => l.id),
+          );
+          report.effort = report.effort.filter((l) => assigned.has(l.id));
+          report.calls = report.calls.map((c) =>
+            assigned.has(c.leadId)
+              ? c
+              : { ...c, leadName: "Reassigned lead", notes: "", leadId: "" },
+          );
+        }
+        return json(report);
+      }
+      if (p === "/api/leads/import" && req.method === "POST") {
+        admin(u);
+        const b = await body(req);
+        if (!Array.isArray(b.leads) || !b.leads.length || b.leads.length > 500)
+          fail("Import 1–500 leads at a time.");
+        const result = transaction(() =>
+          b.leads.map((input, index) => {
+            try {
+              return createLead(u, input);
+            } catch (error) {
+              fail(`Row ${index + 1}: ${error.message}`, error.status || 400);
+            }
+          }),
+        );
+        return json({ count: result.length }, 201);
+      }
+      if (p === "/api/leads" && req.method === "POST") {
+        if (u.role === "nutritionist") fail("Sales access required.", 403);
+        const b = await body(req);
+        return json(
+          transaction(() => createLead(u, b)),
+          201,
+        );
+      }
       const match = p.match(
-        /^\/api\/leads\/([^/]+)(?:\/(calls|sale|confirm))?$/,
+        /^\/api\/leads\/([^/]+)(?:\/(calls|sale|confirm|notes|payment|cancel-sale))?$/,
       );
       if (match) {
         let lead = leadAccess(u, match[1]);
@@ -419,35 +655,106 @@ const server = http.createServer(async (req, res) => {
         if (!action && req.method === "PATCH") {
           if (lead.stage === "Purchased")
             fail("Purchased leads cannot be edited.");
-          const update = validateLead({
-            ...lead,
-            ...b,
-            assignedTo:
-              u.role === "salesperson"
-                ? lead.assignedTo
-                : (b.assignedTo ?? lead.assignedTo),
-          });
+          const update = prepareLead(u, { ...lead, ...b }, lead);
           if (
-            update.assignedTo &&
-            !db
-              .prepare(
-                "SELECT id FROM users WHERE id=? AND role='salesperson' AND active=1",
-              )
-              .get(update.assignedTo)
+            rows("sales").some((s) => s.leadId === lead.id) &&
+            (update.serviceId !== lead.serviceId ||
+              update.assignedTo !== lead.assignedTo)
           )
-            fail("Choose an active salesperson.");
-          if (
-            rows("leads").some(
-              (l) => l.id !== lead.id && phoneKey(l.phone) === update.phone,
-            )
-          )
-            fail("A lead with this mobile number already exists.", 409);
+            fail(
+              "Cancel the pending purchase before changing its service or salesperson.",
+            );
+          const previous = lead;
           lead = { ...lead, ...update, updatedAt: now() };
           transaction(() => {
             put("leads", lead);
+            activity(
+              u,
+              lead,
+              "updated",
+              `Stage: ${previous.stage} → ${lead.stage}. Service: ${previous.service} → ${lead.service}. Assignee: ${db.prepare("SELECT name FROM users WHERE id=?").get(previous.assignedTo)?.name || "Unassigned"} → ${db.prepare("SELECT name FROM users WHERE id=?").get(lead.assignedTo)?.name || "Unassigned"}. Follow-up: ${lead.followUpAt || "none"}. ${lead.reason || ""}`,
+            );
             audit(u, "lead_updated", lead.id);
           });
           return json(lead);
+        }
+        if (action === "notes" && req.method === "POST") {
+          const text = String(b.text || "").trim();
+          if (!text || text.length > 5000)
+            fail("Enter a note up to 5000 characters.");
+          transaction(() => {
+            activity(u, lead, "note", text);
+            audit(u, "lead_note_added", lead.id);
+          });
+          return json({ ok: true }, 201);
+        }
+        if (action === "cancel-sale" && req.method === "POST") {
+          admin(u);
+          const sale = rows("sales").find((s) => s.leadId === lead.id);
+          if (!sale || sale.confirmedAt)
+            fail("Only a pending purchase can be cancelled.");
+          const reason = String(b.reason || "").trim();
+          if (!reason) fail("Enter a cancellation reason.");
+          transaction(() => {
+            db.prepare("DELETE FROM records WHERE kind='sales' AND id=?").run(
+              sale.id,
+            );
+            activity(
+              u,
+              lead,
+              "purchase_cancelled",
+              `Pending purchase cancelled: ${reason.slice(0, 1000)}`,
+            );
+            audit(u, "purchase_cancelled", lead.id);
+          });
+          return json({ ok: true });
+        }
+        if (action === "payment" && req.method === "POST") {
+          admin(u);
+          const sale = rows("sales").find((s) => s.leadId === lead.id);
+          if (!sale?.confirmedAt)
+            fail("Confirm the purchase before adding a payment.");
+          if (sale.clientId)
+            fail("Record PDC payments in the Payments section.");
+          if ((sale.payments || []).some((p) => p.id === b.requestId))
+            return json(sale);
+          const amount = Number(b.amount);
+          if (
+            !Number.isFinite(amount) ||
+            amount <= 0 ||
+            amount > sale.amount - sale.received
+          )
+            fail(
+              "Payment must be positive and no more than the pending balance.",
+            );
+          if (!String(b.note || "").trim())
+            fail("Enter a payment reference or note.");
+          if (!b.requestId || !/^[a-zA-Z0-9_-]{1,120}$/.test(b.requestId))
+            fail("Payment request ID is required.");
+          if ((sale.payments || []).some((p) => p.id === b.requestId))
+            return json(sale);
+          sale.received = Math.round((sale.received + amount) * 100) / 100;
+          sale.payments = [
+            ...(sale.payments || []),
+            {
+              id: b.requestId,
+              amount,
+              note: String(b.note).trim().slice(0, 1000),
+              createdAt: now(),
+              actorId: u.id,
+            },
+          ];
+          transaction(() => {
+            put("sales", sale);
+            activity(
+              u,
+              lead,
+              "payment",
+              `Payment received: ₹${amount}. ${String(b.note).slice(0, 1000)}`,
+            );
+            audit(u, "payment_added", lead.id);
+          });
+          return json(sale);
         }
         if (action === "calls" && req.method === "POST") {
           if (lead.stage === "Purchased")
@@ -465,7 +772,7 @@ const server = http.createServer(async (req, res) => {
                   ? "Invalid Number"
                   : "Contact Attempted"),
             reason: b.reason || lead.reason,
-            followUpAt: b.followUpAt || "",
+            followUpAt: b.followUpAt ?? lead.followUpAt,
           });
           const call = {
             id: randomUUID(),
@@ -477,6 +784,11 @@ const server = http.createServer(async (req, res) => {
             createdAt: now(),
             followUpAt: update.followUpAt,
             stage: update.stage,
+            reason: update.reason,
+            durationSeconds: callDuration(b.durationSeconds),
+            serviceId: lead.serviceId,
+            serviceName: lead.service,
+            sourceName: lead.source,
           };
           transaction(() => {
             put("calls", call);
@@ -493,7 +805,19 @@ const server = http.createServer(async (req, res) => {
             fail("A purchase already exists for this lead.", 409);
           if (!lead.assignedTo)
             fail("Assign a salesperson before recording a purchase.");
-          const saleInput = validateSale(b);
+          const service = serviceFor(lead, lead);
+          const saleInput = validateSale(b, service, [
+            ...new Set([
+              "Dr Luv Patel",
+              "Dt Nilesh Lakhani",
+              ...db
+                .prepare(
+                  "SELECT name FROM users WHERE role='nutritionist' AND active=1",
+                )
+                .all()
+                .map((u) => u.name),
+            ]),
+          ]);
           if (saleInput.confirmed && u.role !== "admin")
             fail("Admin must confirm payment.", 403);
           const sale = {
@@ -503,11 +827,24 @@ const server = http.createServer(async (req, res) => {
             salespersonId: lead.assignedTo,
             createdAt: now(),
             confirmedAt: saleInput.confirmed ? now() : "",
-            clientId: randomUUID(),
+            clientId: service.kind === "pdc" ? randomUUID() : "",
+            serviceId: lead.serviceId,
+            serviceName: lead.service,
+            serviceKind: service.kind,
+            sourceName: lead.source,
+            payments: [],
           };
           transaction(() => {
             put("sales", sale);
             if (sale.confirmedAt) convert(lead, sale);
+            activity(
+              u,
+              lead,
+              "purchase",
+              sale.confirmedAt
+                ? "Purchase confirmed."
+                : "Purchase submitted for admin approval.",
+            );
             audit(u, "purchase_recorded", lead.id);
           });
           return json(sale, 201);
@@ -522,6 +859,12 @@ const server = http.createServer(async (req, res) => {
           transaction(() => {
             put("sales", sale);
             convert(lead, sale);
+            activity(
+              u,
+              lead,
+              "confirmed",
+              "Admin confirmed purchase and payment.",
+            );
             audit(u, "payment_confirmed", lead.id);
           });
           return json(sale);
@@ -546,6 +889,33 @@ const server = http.createServer(async (req, res) => {
               (c.phone != null && typeof c.phone !== "string")
             )
               fail("Invalid client.");
+            if (c.startDate !== undefined && !validDate(c.startDate))
+              fail("Enter a valid client start date.");
+            if (
+              c.endDate !== undefined &&
+              (!validDate(c.endDate) ||
+                (c.startDate && c.endDate < c.startDate))
+            )
+              fail("Client end date must be on or after start date.");
+            if (
+              c.planMonths !== undefined &&
+              (!Number.isInteger(Number(c.planMonths)) ||
+                Number(c.planMonths) < 1 ||
+                Number(c.planMonths) > 60)
+            )
+              fail("Client duration must be 1–60 months.");
+            if (
+              c.payments !== undefined &&
+              (!Array.isArray(c.payments) ||
+                c.payments.some(
+                  (p) => !p || !Number.isFinite(Number(p.amount)),
+                ) ||
+                Math.abs(
+                  c.payments.reduce((sum, p) => sum + Number(p.amount), 0) -
+                    Number(c.receivedAmount),
+                ) > 0.01)
+            )
+              fail("Payment entries must match the received total.");
             const existing = record("clients", c.id);
             if (existing && (existing.revision || 0) !== (c.revision || 0))
               fail(
@@ -554,9 +924,16 @@ const server = http.createServer(async (req, res) => {
               );
             if (
               !Number.isFinite(Number(c.serviceAmount)) ||
+              Number(c.serviceAmount) < 0 ||
               !Number.isFinite(Number(c.receivedAmount)) ||
               Number(c.receivedAmount) < 0 ||
-              (Number(c.receivedAmount) > Number(c.serviceAmount) && !(existing && Number(existing.receivedAmount) === Number(c.receivedAmount) && Number(existing.serviceAmount) === Number(c.serviceAmount)))
+              (Number(c.receivedAmount) > Number(c.serviceAmount) &&
+                !(
+                  existing &&
+                  Number(existing.receivedAmount) ===
+                    Number(c.receivedAmount) &&
+                  Number(existing.serviceAmount) === Number(c.serviceAmount)
+                ))
             )
               fail("Invalid payment amounts.");
             put("clients", { ...c, revision: (existing?.revision || 0) + 1 });
@@ -657,6 +1034,7 @@ function convert(lead, sale) {
     followUpAt: "",
     updatedAt: now(),
   });
+  if (sale.serviceKind === "general") return;
   const start = new Date(`${sale.startDate}T00:00:00Z`);
   const end = new Date(start);
   const targetMonth = end.getUTCMonth() + sale.months;
@@ -683,8 +1061,10 @@ function convert(lead, sale) {
     notes: `CRM: ${sale.plan}`,
     createdAt: now(),
     crmLeadId: lead.id,
+    serviceId: sale.serviceId,
+    serviceName: sale.serviceName,
   });
 }
 server.listen(Number(process.env.PORT || 3000), "0.0.0.0", () =>
-  console.log(`PDC server ready on port ${process.env.PORT || 3000}`),
+  console.log(`PDC server ready on port ${server.address().port}`),
 );
