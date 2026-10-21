@@ -110,3 +110,7 @@ npm run test:browser
 For installed Google Chrome on macOS, use `PDC_BROWSER_CHANNEL=chrome npm run test:browser`. Tests create a temporary database and synthetic accounts, launch the app on a free local port, exercise three browser workflows, and remove the temporary database. Screenshots and test exports are saved in `qa/artifacts/` (ignored by Git). `npm test` runs the API/domain/migration suites without browser dependencies. CI runs both suites.
 
 Incoming leads are supported through manual entry and CSV. Live Instagram/WhatsApp/ad-platform ingestion requires connecting those accounts separately. Calling is manually logged in the browser; the existing CallFlow connector can sync device events. Audio recording/transcription is not part of this dashboard.
+
+## Sales operations
+
+See [Operations guide](docs/OPERATIONS-GUIDE.md) for Excel import, automatic assignment, team leaders, targets, follow-up escalation, delivery, renewals, commission and connection setup. Runtime dependencies now install with `npm ci --omit=dev`; Docker installs these from the lockfile. External messaging and AI remain disconnected until configured.

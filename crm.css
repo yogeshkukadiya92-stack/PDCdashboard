@@ -423,3 +423,33 @@ body[data-role="nutritionist"] #addPaymentButton {
     width: 100%;
   }
 }
+.ops-tabs {
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+#view-operations .crm-panel h3 {
+  margin-top: 24px;
+}
+#view-operations .crm-panel p {
+  line-height: 1.6;
+}
+#view-operations code {
+  overflow-wrap: anywhere;
+}
+#opsError {
+  color: #b42318;
+}
+#opsForm fieldset {
+  border: 1px solid #dce6e2;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+#opsForm textarea {
+  min-height: 100px;
+  width: 100%;
+}
+#opsForm > label {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}

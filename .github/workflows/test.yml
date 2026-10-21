@@ -10,9 +10,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - run: node --check app.js && node --check crm.js && node --check server.js
-      - run: npm test
+      - run: node --check app.js && node --check crm.js && node --check server.js && node --check growth.js && node --check operations.js
       - run: npm ci
+      - run: npm test
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - uses: actions/upload-artifact@v4

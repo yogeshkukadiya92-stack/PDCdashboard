@@ -25,7 +25,12 @@ try {
     });
     server.once("exit", (code) => reject(new Error(`Server exited ${code}`)));
   });
-  for (const script of ["admin-flow.mjs", "roles-flow.mjs", "admin-controls.mjs"])
+  for (const script of [
+    "admin-flow.mjs",
+    "roles-flow.mjs",
+    "admin-controls.mjs",
+    "operations-flow.mjs",
+  ])
     await new Promise((resolve, reject) => {
       const child = spawn(process.execPath, [path.join(root, "qa", script)], {
         cwd: root,
