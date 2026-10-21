@@ -1,3 +1,4 @@
+import { createCalendar } from "./calendar.js";
 import { createGrowth } from "./growth.js";
 import { createCallFlowApi } from "./callflow-api.js";
 import http from "node:http";
@@ -362,6 +363,7 @@ const staticFiles = new Set([
   "styles.css",
   "crm.css",
   "operations.js",
+  "calendar-ui.js",
 ]);
 const callflow = createCallFlowApi({
   db,
@@ -397,6 +399,16 @@ transaction(() => {
     }
   }
 });
+const calendar = createCalendar({
+  db,
+  rows,
+  record,
+  put,
+  body,
+  fail,
+  audit,
+  leadAccess,
+});
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   const p = url.pathname;
@@ -409,6 +421,7 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify(data));
   };
   try {
+    if (await calendar.callback(req, url, res)) return;
     if (p === "/api/health") return json({ ok: true });
     if (await callflow(req, url, json)) return;
     if (await growth.intake(req, url, json)) return;
@@ -464,6 +477,7 @@ const server = http.createServer(async (req, res) => {
       }
       const u = userFor(req);
       if (!u) fail("Please log in.", 401);
+      if (await calendar.route(req, url, u, json, res)) return;
       if (await growth.route(req, url, u, json)) return;
       if (p === "/api/auth/logout" && req.method === "POST") {
         db.prepare("DELETE FROM sessions WHERE token=?").run(
@@ -1059,6 +1073,7 @@ const server = http.createServer(async (req, res) => {
               "messages",
               "intakeEvents",
               "assignment",
+              "meetings",
             ].map((k) => [k, rows(k)]),
           ),
           version: 3,
