@@ -97,6 +97,16 @@
     if (s) state = s;
     if (!state || currentUser.role === "nutritionist") return;
     data = await api("/api/operations?month=" + month);
+    await window.calendarRefresh?.(state);
+    if (new URLSearchParams(location.search).has("calendar")) {
+      tab = "calendar";
+      showToast(
+        new URLSearchParams(location.search).get("calendar") === "connected"
+          ? "Google connected. Choose a calendar to finish setup."
+          : "Google connection was not completed. Try connecting again.",
+      );
+      history.replaceState(null, "", location.pathname + location.hash);
+    }
     render();
     const nav = document.querySelector('[data-view="view-operations"] span');
     if (nav)
@@ -129,9 +139,11 @@
       ["renewals", "Renewals"],
       ["commission", "Commission"],
       ["messages", "WhatsApp"],
+      ["calendar", "Meetings & Calendar"],
     ];
     if (admin()) tabs.push(["setup", "Settings & integrations"]);
     let content = "";
+    if (tab === "calendar") content = '<div id="calendarWorkspace"></div>';
     if (tab === "work")
       content = `${btn("alerts", "Enable browser follow-up alerts")}<p>Alerts update while the dashboard is open. Escalated items appear for the team leader and admin after ${e(data.settings.escalationHours)} hours. External notifications are not connected.</p><h3>Follow-up alerts (${data.alerts.length})</h3>${table(
         ["Lead", "Owner", "Alert", "Due (IST)", "Escalation", "Action"],
@@ -277,6 +289,7 @@
       )}<h3>Connections</h3><p><strong>Excel:</strong> Ready. Import .xlsx or CSV from CRM → Import leads.</p><p><strong>Automatic lead intake:</strong> ${data.integrations.intake ? "Token configured" : "Not connected"}. Website/automation can POST leads to <code>${e(location.origin)}/api/intake/leads</code>.</p>${btn("intake-token", data.integrations.intake ? "Rotate intake token" : "Create intake token")}<details><summary>Integration instructions</summary><p>Send a server-side Authorization: Bearer token header and JSON fields externalId, name, phone, serviceId, source. Same source + externalId is idempotent. Reusing a phone for the same service returns a duplicate error. Never place the token in Excel or a public website.</p><p>WhatsApp API: configure WHATSAPP_TOKEN, WHATSAPP_PHONE_ID and WHATSAPP_API_VERSION on the server. Use approved templates without variables for API sending; manual drafts support {{name}} and {{service}}.</p><p>AI call summaries: configure OPENAI_API_KEY and optionally OPENAI_SUMMARY_MODEL. Add a consented transcript from call history. Recording links are stored; calls are not automatically recorded or transcribed.</p></details><p><strong>WhatsApp API:</strong> ${data.integrations.whatsapp ? "Configured" : "Not connected"} · <strong>AI summaries:</strong> ${data.integrations.ai ? "Configured" : "Not connected"}</p>`;
     document.querySelector("#view-operations").innerHTML =
       `<div class="crm-page-heading"><div><h2>Sales operations</h2><p>Keep every lead, team and service moving.</p></div><label>Target month<input id="opsMonth" type="month" value="${month}"></label>${btn("refresh", "Refresh")}</div><div class="crm-row-actions ops-tabs">${tabs.map(([id, label]) => `<button type="button" class="${tab === id ? "primary-button" : "ghost-button"}" data-ops="tab" data-id="${id}" aria-pressed="${tab === id}">${label}</button>`).join("")}</div><section class="panel crm-panel">${content}</section>`;
+    if (tab === "calendar") window.calendarMount?.();
     document.querySelector("#opsMonth").onchange = async (event) => {
       if (event.target.value) {
         month = event.target.value;

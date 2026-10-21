@@ -29,6 +29,17 @@ try {
       .getByRole("button", { name, exact: true })
       .click();
   await page.getByRole("link", { name: "Operations", exact: true }).click();
+  await op("Meetings & Calendar");
+  await page
+    .getByText("Google Calendar setup required.", { exact: true })
+    .waitFor();
+  await page.getByText("No meetings yet.", { exact: true }).waitFor();
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Connect Google Calendar", exact: true })
+      .count(),
+    0,
+  );
   await op("Settings & integrations");
   await op("Assignment & alerts");
   await page.locator("[name=assignment]").selectOption("round-robin");
@@ -63,14 +74,12 @@ try {
     ["Full Name", "Mobile Number", "City"],
     ["Operations Excel QA", "9898989891", "Surat"],
   ]);
-  await page
-    .locator("#leadCSV")
-    .setInputFiles({
-      name: "leads.xlsx",
-      mimeType:
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      buffer: Buffer.from(await wb.xlsx.writeBuffer()),
-    });
+  await page.locator("#leadCSV").setInputFiles({
+    name: "leads.xlsx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: Buffer.from(await wb.xlsx.writeBuffer()),
+  });
   await page.getByText("1 rows found. First 5 shown:").waitFor();
   await page.locator("#crmModalForm button[type=submit]").click();
   await page.locator("#crmDialog").waitFor({ state: "hidden" });
