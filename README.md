@@ -46,7 +46,7 @@ Use `Load Sheet` to pull the latest Google Sheet records back into the dashboard
 
 ## Sales CRM (version 2)
 
-The dashboard now runs a Node.js 24+ server with a shared SQLite database. Browser-only authentication has been replaced with server-verified accounts, hashed passwords, HttpOnly sessions and role permissions. CRM features include lead assignment, phone-number deduplication, call histories, follow-up queues, purchase approval, automatic PDC client creation, salesperson reports, CSV exports and an audit trail.
+The dashboard now runs a Node.js 24+ server with a shared SQLite database. Browser-only authentication has been replaced with server-verified accounts, hashed passwords, HttpOnly sessions and role permissions. CRM features include lead assignment, phone-and-service deduplication, call histories, follow-up queues, purchase approval, automatic PDC client creation, salesperson reports, CSV exports and an audit trail.
 
 ### Coolify deployment
 
@@ -58,7 +58,7 @@ Before switching production to this version:
 4. Add runtime environment variables **`ADMIN_EMAIL`** (your admin email) and **`ADMIN_PASSWORD`** (a new password of at least 5 characters). Optional: `ADMIN_NAME`. The initial account is created only when the database is empty. Later password changes use My password or Team → Reset password.
 5. Deploy this version, then log in with those new credentials. The previous password embedded in the website no longer applies.
 6. From the original browser, click **Back up & import existing clients**. A backup is downloaded before migration. This copies browser client records without removing the original browser backup. Alternatively use the existing client JSON Import control. Imported records persist on the server after a successful save.
-7. In **Team**, create each salesperson's account. Assign leads in **CRM**. A nutritionist account must use the exact configured name `Dr Luv Patel` or `Dt Nilesh Lakhani`; it can read only that nutritionist's clients.
+7. In **Team**, create each salesperson's account. Assign leads in **CRM**. Nutritionist accounts can use their own names; they appear in the assignment lists and can read only clients assigned to that name.
 
 **Backup and rollback:** export CRM & clients in Team and back up the persistent `/app/data` volume using your server's volume-backup process. The JSON export contains business records but not password hashes or sessions. To roll back, redeploy the previous image and retain the database volume; the old application uses browser storage, so the predeployment export is required for restoring its client state. New CRM records are only available in this version.
 
@@ -66,7 +66,7 @@ Before switching production to this version:
 
 - Salespeople see and update only their assigned leads. Admins see all records and manage users; nutritionists cannot access sales data.
 - Calls are manually logged. The server records the signed-in caller and timestamp; dial links open the device's calling app. Automatic telephony/recording is not integrated.
-- Salespeople record a pending purchase. An admin verifies it before it counts as a confirmed sale and creates a PDC client. A purchase can only be confirmed once.
+- Salespeople record a pending purchase. An admin verifies it before it counts as a confirmed sale. PDC services create a PDC client; general services remain in CRM with their own payment tracking. A purchase can only be confirmed once.
 - Received amounts changed through PDC payments update the related CRM purchase and reporting balance.
 - Reports use Asia/Kolkata dates. Assigned leads use lead creation dates; attempts use call dates; confirmed buyers use purchase-confirmation dates. Distinct connected leads are separate from attempt counts. Conversion rates compare purchases with the relevant lead/call cohort within the selected period; current pending follow-ups and collection balances are labeled separately.
 - Client writes check record revisions to avoid silently overwriting another admin's work. Lead forms check the last update timestamp. Refresh after a conflict.
@@ -77,3 +77,36 @@ Before switching production to this version:
 Set `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and optionally `PORT` / `DATA_DIR`, then run `npm start`. No third-party server packages are required. Do not commit passwords or the data directory.
 
 Run `npm test` for the lead/call/purchase flow, duplicate prevention, account restrictions, payment reporting, session revocation, origin protection, optimistic client updates, and IST/distinct-person report calculations.
+
+### Adding salespeople and reviewing performance
+
+Admins can click **+ Add salesperson** directly in CRM or Sales Reports, or use **Team → Add team member**. Enter a name, unique email and initial password. Each salesperson uses that email and password on the same dashboard login page; their assigned leads and personal reports are available after login. Admins can reset passwords or disable accounts in Team.
+
+Assign leads in CRM, then use **Log call** to record each attempt and outcome. Sales Reports compares each salesperson's connected calls, unanswered calls, switched-off numbers, invalid numbers, connection rate, distinct connected leads, confirmed buyers and collections. Date and salesperson filters apply to the report and CSV export. Disabled salespeople remain available in report filters for historical analysis. Calls must be logged manually.
+
+
+## Multi-service operations update
+
+See [the workflow guide](docs/WORKFLOW-GUIDE.md) and [QA coverage report](docs/QA-REPORT.md).
+
+- **Services:** create/edit/archive offerings, set default price and duration, and name a delivery leader. Choose PDC counselling only for services requiring a nutritionist and monthly meeting schedule; choose General service for other offerings.
+- **CRM intake:** manually enter any source/campaign or import CSV (up to 500 rows / 1 MB per upload). The same phone can have different service opportunities. A duplicate within the same service rejects the import without partial writes.
+- **Lead work:** assignment, calls, outcomes, stage, optional duration, discussion, reasons, follow-ups and activity notes. Historical calls retain their service/source attribution after lead edits.
+- **Approvals:** review all pending purchases, confirm once, or cancel an incorrect pending purchase with a reason. Reassigning a pending purchase requires cancelling it first.
+- **Collections:** PDC installments stay in the existing client payment workflow. General-service installments are entered from the confirmed lead detail and cannot exceed the balance. Retried payment requests with the same request ID are not applied twice.
+- **Reports:** salesperson, service, source, lead effort and full call-log tables with date/service/source/salesperson filters and CSV export. Unique confirmed people are distinct from the count of service purchases. Activity-only work appears in Lead effort even when no call occurred in the period.
+- **Team:** individual salesperson and nutritionist accounts, password reset, disable/enable. Salespeople see only assigned lead details and personal analytics; their historical totals remain after reassignment.
+
+Existing SQLite records migrate on startup. Legacy service names are retained; legacy services use PDC behavior to preserve existing purchase/client links. The migration is idempotent. Back up the existing database volume before deploying. The existing Dockerfile and single persistent volume remain valid. No production deployment is performed by the tests.
+
+### Browser regression checks
+
+```sh
+npm ci
+npx playwright install chromium
+npm run test:browser
+```
+
+For installed Google Chrome on macOS, use `PDC_BROWSER_CHANNEL=chrome npm run test:browser`. Tests create a temporary database and synthetic accounts, launch the app on a free local port, exercise three browser workflows, and remove the temporary database. Screenshots and test exports are saved in `qa/artifacts/` (ignored by Git). `npm test` runs the API/domain/migration suites without browser dependencies. CI runs both suites.
+
+Incoming leads are supported through manual entry and CSV. Live Instagram/WhatsApp/ad-platform ingestion requires connecting those accounts separately. Calling is manually logged in the browser; the existing CallFlow connector can sync device events. Audio recording/transcription is not part of this dashboard.

@@ -17,8 +17,11 @@ function normalizeNutritionist(value) {
   const text = String(value || "")
     .trim()
     .toLowerCase();
-  if (text.includes("nilesh")) return "Dt Nilesh Lakhani";
-  return "Dr Luv Patel";
+  if (["nilesh", "nilesh lakhani", "dt nilesh lakhani"].includes(text))
+    return "Dt Nilesh Lakhani";
+  if (["", "luv", "luv patel", "dr luv patel"].includes(text))
+    return "Dr Luv Patel";
+  return String(value).trim();
 }
 
 const fallbackSeedClients = [
@@ -343,12 +346,15 @@ function normalizePayments(client) {
 function normalizeMeetings(client) {
   const generated = generateMonthlyMeetings(client);
   const existing = Array.isArray(client.meetings) ? client.meetings : [];
-  return generated.map((meeting) => {
-    const match = existing.find(
-      (item) => item.id === meeting.id || item.date === meeting.date,
-    );
+  return generated.map((meeting, index) => {
+    const match =
+      existing.find(
+        (item) => item.id === meeting.id || item.date === meeting.date,
+      ) || existing[index];
     return {
       ...meeting,
+      id: match?.id || meeting.id,
+      date: match?.date || meeting.date,
       status: match?.status || meeting.status,
       notes: match?.notes || "",
       weight: match?.weight || "",
@@ -358,7 +364,8 @@ function normalizeMeetings(client) {
 }
 
 function generateMonthlyMeetings(client) {
-  const start = client.meetingDate || client.startDate;
+  const start =
+    client.meetings?.[0]?.date || client.meetingDate || client.startDate;
   const months = Math.max(Number(client.planMonths || 1), 1);
   return Array.from({ length: months }, (_, index) => ({
     id: `meeting-${index + 1}-${start}`,
@@ -1045,6 +1052,7 @@ function resetForm({ clearProof = true } = {}) {
 
 async function handleSubmit(event) {
   event?.preventDefault();
+  if (!document.querySelector("#clientForm").reportValidity()) return;
   const baseClient = {
     id: elements.clientId.value || createId(),
     name: elements.clientName.value.trim(),
@@ -1101,11 +1109,27 @@ async function handleSubmit(event) {
       ];
     }
 
+    let meetings = existing.meetings;
+    if (
+      baseClient.meetingDate &&
+      baseClient.meetingDate !== existing.meetingDate
+    ) {
+      let pendingIndex = 0;
+      meetings = existing.meetings.map((m) =>
+        m.status === "Pending"
+          ? {
+              ...m,
+              date: addCalendarMonths(baseClient.meetingDate, pendingIndex++),
+            }
+          : m,
+      );
+    }
     const client = normalizeClient({
       ...existing,
       ...baseClient,
       createdAt: existing.createdAt,
       payments: updatedPayments,
+      meetings,
     });
     clients[existingIndex] = client;
     savedClient = client;
@@ -1210,6 +1234,7 @@ async function markPaid(id) {
 
 async function addPayment(event) {
   event?.preventDefault();
+  if (!elements.paymentForm.reportValidity()) return;
   const client = clients.find((item) => item.id === selectedClientId);
   if (!client) return;
   const amount = Number(elements.paymentAmount.value || 0);
@@ -1718,6 +1743,7 @@ function switchView(viewId) {
     payments: "view-payments",
     reminders: "view-reminders",
   };
+  const previousView = document.querySelector(".page-section.active")?.id;
   let resolvedViewId = viewAliases[viewId] || viewId;
   if (
     currentUser?.role === "salesperson" &&
@@ -1742,6 +1768,11 @@ function switchView(viewId) {
     .querySelectorAll(".nav-links a")
     .forEach((link) => link.classList.remove("active"));
 
+  if (
+    !document.getElementById(resolvedViewId)?.classList.contains("page-section")
+  )
+    resolvedViewId =
+      currentUser?.role === "salesperson" ? "view-crm" : "view-overview";
   const section = document.getElementById(resolvedViewId);
   if (section) section.classList.add("active");
 
@@ -1750,8 +1781,12 @@ function switchView(viewId) {
   );
   if (navLink) navLink.classList.add("active");
   if (window.location.hash !== `#${resolvedViewId}`) {
-    history.replaceState(null, "", `#${resolvedViewId}`);
+    history.pushState(null, "", `#${resolvedViewId}`);
   }
+  if (previousView !== resolvedViewId)
+    window.dispatchEvent(
+      new CustomEvent("pdc:view", { detail: resolvedViewId }),
+    );
 }
 
 function bindEvents() {

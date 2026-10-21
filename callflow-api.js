@@ -239,6 +239,9 @@ export function createCallFlowApi({
         leadId: l.id,
         actorId: u.id,
         actorName: u.name,
+        serviceId: existing?.serviceId || l.serviceId,
+        serviceName: existing?.serviceName || l.service,
+        sourceName: existing?.sourceName || l.source,
         source: "callflow",
         deviceId,
         startedAt,
@@ -297,6 +300,7 @@ export function createCallFlowApi({
         ...c,
         outcome,
         dispositionCode: code,
+        stage,
         notes: text(p.note) || `CallFlow: ${code}`,
         updatedAt: new Date().toISOString(),
       });
@@ -332,6 +336,17 @@ export function createCallFlowApi({
         createdAt: millis(p.createdAt),
         createdBy: u.id,
         deviceId,
+      });
+      put("activities", {
+        id: `callflow-${event.entityId}`,
+        leadId: l.id,
+        actorId: u.id,
+        actorName: u.name,
+        type: "note",
+        text: note,
+        serviceId: l.serviceId,
+        sourceName: l.source,
+        createdAt: new Date(millis(p.createdAt)).toISOString(),
       });
       if (c && !c.notes.includes(note))
         put("calls", {
@@ -615,7 +630,9 @@ export function createCallFlowApi({
         .filter(
           (l) =>
             l.followUpAt &&
-            l.stage !== "Purchased" &&
+            !["Purchased", "Not Interested", "Invalid Number"].includes(
+              l.stage,
+            ) &&
             !followUps.some((f) => f.leadId === l.id && f.status === "PENDING"),
         )
         .map((l) => ({

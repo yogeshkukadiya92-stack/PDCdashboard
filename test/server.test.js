@@ -322,3 +322,24 @@ test("existing clients without a mobile number retain their records", async () =
   assert.equal(login.status, 200);
   assert.ok(login.cookie);
  });
+
+test("salesperson call outcomes stay isolated and respect report dates", () => {
+  const users = ["one", "two", "idle"].map(id => ({ id, name: id, role: "salesperson" }));
+  const calls = ["Connected", "Connected", "No Answer", "Switched Off", "Invalid Number"].map(outcome => ({
+    actorId: "one", leadId: "lead", outcome, createdAt: "2026-10-21T06:00:00Z",
+  }));
+  calls.push({ actorId: "two", leadId: "other", outcome: "Connected", createdAt: "2026-10-21T06:00:00Z" });
+  calls.push({ actorId: "one", leadId: "old", outcome: "Connected", createdAt: "2026-10-19T06:00:00Z" });
+  const rows = salesReport(users, [], calls, [], { from: "2026-10-21", to: "2026-10-21" });
+  assert.equal(rows[0].attempts, 5);
+  assert.equal(rows[0].connectedCalls, 2);
+  assert.equal(rows[0].connected, 1);
+  assert.equal(rows[0].noAnswer, 1);
+  assert.equal(rows[0].switchedOff, 1);
+  assert.equal(rows[0].invalidNumber, 1);
+  assert.equal(rows[0].connectionRate, 40);
+  assert.equal(rows[1].attempts, 1);
+  assert.equal(rows[1].connectionRate, 100);
+  assert.equal(rows[2].connectionRate, 0);
+  assert.equal(salesReport(users, [], calls, [], { salesperson: "two" }).length, 1);
+});
