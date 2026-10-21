@@ -36,6 +36,8 @@ export function validateLead(input) {
     throw new Error("Enter a lead name (up to 120 characters).");
   if (phone.length < 10 || phone.length > 15)
     throw new Error("Enter a valid mobile number.");
+  if (input.priority && !["Hot", "Warm", "Cold"].includes(input.priority))
+    throw new Error("Choose Hot, Warm or Cold priority.");
   const stage = input.stage || "New";
   if (!stages.includes(stage) || stage === "Purchased")
     throw new Error("Use Record purchase to mark a purchased lead.");
@@ -49,6 +51,7 @@ export function validateLead(input) {
   return {
     name,
     phone,
+    priority: input.priority || "Warm",
     city: String(input.city || "")
       .trim()
       .slice(0, 120),

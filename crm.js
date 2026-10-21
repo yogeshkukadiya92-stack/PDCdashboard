@@ -126,18 +126,20 @@
     document.querySelector("#signedInUser").textContent =
       `${currentUser.name} · ${role}`;
     document.querySelectorAll(".nav-links a").forEach((a) => {
-      a.hidden =
-        role === "salesperson"
-          ? !["view-crm", "view-sales-reports"].includes(a.dataset.view)
-          : role === "nutritionist"
-            ? [
-                "view-crm",
-                "view-sales-reports",
-                "view-team",
-                "view-services",
-                "view-payments",
-              ].includes(a.dataset.view)
-            : false;
+      a.hidden = ["salesperson", "teamleader"].includes(role)
+        ? !["view-crm", "view-sales-reports", "view-operations"].includes(
+            a.dataset.view,
+          )
+        : role === "nutritionist"
+          ? [
+              "view-crm",
+              "view-sales-reports",
+              "view-team",
+              "view-services",
+              "view-operations",
+              "view-payments",
+            ].includes(a.dataset.view)
+          : false;
     });
     for (const id of ["newClientButton", "exportButton", "notifyButton"])
       document.getElementById(id).hidden = role !== "admin";
@@ -179,6 +181,8 @@
       renderTeam();
       renderServices();
       renderSalesOverview();
+      if (currentUser.role !== "nutritionist")
+        await window.operationsRefresh?.(state);
       if (currentUser.role !== "nutritionist") await loadReports();
       switchView(
         window.location.hash.slice(1) ||
@@ -191,7 +195,7 @@
   window.crmRefresh = refresh;
   function leadRow(l) {
     const sale = state.sales.find((s) => s.leadId === l.id);
-    return `<tr><td><strong>${e(l.name)}</strong><small><a href="tel:${e(l.phone)}">${e(l.phone)}</a> · ${e(l.source)}</small><small>${e(l.service)} · ${state.calls.filter((c) => c.leadId === l.id).length} calls</small></td><td>${e(owner(l.assignedTo))}</td><td><span class="crm-stage">${e(l.stage)}</span>${sale && !sale.confirmedAt ? "<small>Payment confirmation pending</small>" : ""}</td><td class="${due(l) ? "crm-overdue" : ""}">${when(l.followUpAt)}</td><td><div class="crm-row-actions">${button("detail", "Open", l.id)}${!closed(l) ? button("call", "Log call", l.id) : ""}</div></td></tr>`;
+    return `<tr><td><strong>${e(l.name)}</strong><small><a href="tel:${e(l.phone)}">${e(l.phone)}</a> · ${e(l.source)}</small><small>${e(l.service)} · ${e(l.priority || "Warm")} · ${state.calls.filter((c) => c.leadId === l.id).length} calls</small></td><td>${e(owner(l.assignedTo))}</td><td><span class="crm-stage">${e(l.stage)}</span>${sale && !sale.confirmedAt ? "<small>Payment confirmation pending</small>" : ""}</td><td class="${due(l) ? "crm-overdue" : ""}">${when(l.followUpAt)}</td><td><div class="crm-row-actions">${button("detail", "Open", l.id)}${!closed(l) ? button("call", "Log call", l.id) : ""}</div></td></tr>`;
   }
   function renderCRM() {
     const el = document.querySelector("#view-crm");
@@ -307,14 +311,14 @@
           l.serviceId || "pdc",
           "required",
         ),
-      )}${fields("Lead source", input("source", l.source || "Other", "text", 'required maxlength="120" list="crmSourceSuggestions"'))}<datalist id="crmSourceSuggestions">${sources.map((v) => `<option value="${e(v)}">`).join("")}</datalist>${fields("Source details / campaign", input("sourceDetails", l.sourceDetails, "text", 'maxlength="500"'))}${currentUser.role === "admin" ? fields("Salesperson", `<select name="assignedTo"><option value="">Unassigned</option>${options(salespeople(), l.assignedTo)}</select>`) : ""}${fields(
+      )}${fields("Lead source", input("source", l.source || "Other", "text", 'required maxlength="120" list="crmSourceSuggestions"'))}<datalist id="crmSourceSuggestions">${sources.map((v) => `<option value="${e(v)}">`).join("")}</datalist>${fields("Source details / campaign", input("sourceDetails", l.sourceDetails, "text", 'maxlength="500"'))}${["admin", "teamleader"].includes(currentUser.role) ? fields("Salesperson", `<select name="assignedTo"><option value="">Unassigned</option>${options(salespeople(), l.assignedTo)}</select>`) : ""}${fields(
         "Stage",
         select(
           "stage",
           stages.filter((s) => s !== "Purchased"),
           l.stage,
         ),
-      )}${fields("Next follow-up (your local time)", input("followUpAt", local(l.followUpAt), "datetime-local"))}${fields("Reason for lost / deferred / invalid lead", input("reason", l.reason))}${fields("Notes", `<textarea name="notes" rows="3" maxlength="5000">${e(l.notes)}</textarea>`)}</div>`,
+      )}${fields("Priority", select("priority", ["Hot", "Warm", "Cold"], l.priority || "Warm"))}${fields("Next follow-up (your local time)", input("followUpAt", local(l.followUpAt), "datetime-local"))}${fields("Reason for lost / deferred / invalid lead", input("reason", l.reason))}${fields("Notes", `<textarea name="notes" rows="3" maxlength="5000">${e(l.notes)}</textarea>`)}</div>`,
       id ? "Save changes" : "Create lead",
       async (b) => {
         if (b.followUpAt) b.followUpAt = new Date(b.followUpAt).toISOString();
@@ -391,7 +395,7 @@
         .filter((c) => c.leadId === id)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const d = document.querySelector("#crmDialog");
-    d.innerHTML = `<div class="crm-dialog-heading"><div><h3 id="crmDialogTitle">${e(l.name)}</h3><a href="tel:${e(l.phone)}">${e(l.phone)}</a></div>${button("close", "Close")}</div><dl class="crm-detail-grid"><div><dt>Salesperson</dt><dd>${e(owner(l.assignedTo))}</dd></div><div><dt>Stage</dt><dd>${e(l.stage)}</dd></div><div><dt>Source</dt><dd>${e(l.source)}</dd></div><div><dt>Service</dt><dd>${e(l.service)}</dd></div><div><dt>City</dt><dd>${e(l.city) || "—"}</dd></div><div><dt>Next follow-up (IST)</dt><dd>${when(l.followUpAt)}</dd></div></dl><p>${e(l.notes)}</p>${l.sourceDetails ? `<p><strong>Campaign / source details:</strong> ${e(l.sourceDetails)}</p>` : ""}${l.reason ? `<p><strong>Reason:</strong> ${e(l.reason)}</p>` : ""}<div class="crm-row-actions">${button("add-note", "Add activity note", id)}${l.stage !== "Purchased" ? button("edit-lead", "Edit lead", id) : ""}${!closed(l) ? button("call", "Log call", id) : ""}${!sale && !closed(l) ? button("sale", "Record purchase", id, "primary-button") : ""}</div>${sale ? `<section class="crm-purchase"><h4>${sale.confirmedAt ? "Confirmed purchase" : "Payment confirmation pending"}</h4><p>${e(sale.plan)} · ${sale.months} months · ${e(sale.nutritionist || sale.deliveryOwner || "No delivery leader assigned")}</p><p>Service: ${money(sale.amount)} · Received: ${money(sale.received)} · Pending: ${money(sale.amount - sale.received)}</p>${!sale.confirmedAt && currentUser.role === "admin" ? button("confirm-sale", "Confirm purchase", id, "primary-button") + button("cancel-sale", "Cancel pending purchase", id) : ""}${sale.confirmedAt && !sale.clientId && currentUser.role === "admin" && sale.received < sale.amount ? button("add-payment", "Record payment", id) : ""}</section>` : ""}${activityTimeline(id)}<h4>Call history (${calls.length}) · ${duration(calls.reduce((n, c) => n + (c.durationSeconds || 0), 0))} total</h4><div class="crm-timeline">${calls.map((c) => `<article><strong>${e(c.outcome)}</strong><small>Stage: ${e(c.stage || "—")} · Duration: ${c.durationSeconds == null ? "Not recorded" : duration(c.durationSeconds)}</small><small>${when(c.createdAt)} · ${e(c.actorName)}</small><p>${e(c.notes)}</p>${c.reason ? `<p><strong>Reason:</strong> ${e(c.reason)}</p>` : ""}${c.followUpAt ? `<small>Next follow-up: ${when(c.followUpAt)}</small>` : ""}</article>`).join("") || "<p>No calls logged yet.</p>"}</div>`;
+    d.innerHTML = `<div class="crm-dialog-heading"><div><h3 id="crmDialogTitle">${e(l.name)}</h3><a href="tel:${e(l.phone)}">${e(l.phone)}</a></div>${button("close", "Close")}</div><dl class="crm-detail-grid"><div><dt>Salesperson</dt><dd>${e(owner(l.assignedTo))}</dd></div><div><dt>Stage</dt><dd>${e(l.stage)}</dd></div><div><dt>Source</dt><dd>${e(l.source)}</dd></div><div><dt>Service</dt><dd>${e(l.service)}</dd></div><div><dt>City</dt><dd>${e(l.city) || "—"}</dd></div><div><dt>Next follow-up (IST)</dt><dd>${when(l.followUpAt)}</dd></div></dl><p>${e(l.notes)}</p>${l.sourceDetails ? `<p><strong>Campaign / source details:</strong> ${e(l.sourceDetails)}</p>` : ""}${l.reason ? `<p><strong>Reason:</strong> ${e(l.reason)}</p>` : ""}<div class="crm-row-actions">${button("add-note", "Add activity note", id)}<button type="button" class="ghost-button" data-ops="message" data-id="${e(id)}">WhatsApp follow-up</button>${l.stage !== "Purchased" ? button("edit-lead", "Edit lead", id) : ""}${!closed(l) ? button("call", "Log call", id) : ""}${!sale && !closed(l) ? button("sale", "Record purchase", id, "primary-button") : ""}</div>${sale ? `<section class="crm-purchase"><h4>${sale.confirmedAt ? "Confirmed purchase" : "Payment confirmation pending"}</h4><p>${e(sale.plan)} · ${sale.months} months · ${e(sale.nutritionist || sale.deliveryOwner || "No delivery leader assigned")}</p><p>Service: ${money(sale.amount)} · Received: ${money(sale.received)} · Pending: ${money(sale.amount - sale.received)}</p>${!sale.confirmedAt && currentUser.role === "admin" ? button("confirm-sale", "Confirm purchase", id, "primary-button") + button("cancel-sale", "Cancel pending purchase", id) : ""}${sale.confirmedAt && !sale.clientId && currentUser.role === "admin" && sale.received < sale.amount ? button("add-payment", "Record payment", id) : ""}</section>` : ""}${activityTimeline(id)}<h4>Call history (${calls.length}) · ${duration(calls.reduce((n, c) => n + (c.durationSeconds || 0), 0))} total</h4><div class="crm-timeline">${calls.map((c) => `<article><strong>${e(c.outcome)}</strong><small>Stage: ${e(c.stage || "—")} · Duration: ${c.durationSeconds == null ? "Not recorded" : duration(c.durationSeconds)}</small><small>${when(c.createdAt)} · ${e(c.actorName)}</small><p>${e(c.notes)}</p><button type="button" class="ghost-button" data-ops="insight" data-id="${e(c.id)}">Recording & summary</button>${c.summary ? `<p><strong>AI summary — review for accuracy:</strong> ${e(c.summary)}</p>` : ""}${c.reason ? `<p><strong>Reason:</strong> ${e(c.reason)}</p>` : ""}${c.followUpAt ? `<small>Next follow-up: ${when(c.followUpAt)}</small>` : ""}</article>`).join("") || "<p>No calls logged yet.</p>"}</div>`;
     d.showModal();
   }
   async function loadReports() {
@@ -773,58 +777,146 @@
     });
   }
   function importLeadsForm() {
-    let parsed = [];
+    let grid = [],
+      headers = [];
+    const columns = [
+      "name",
+      "phone",
+      "city",
+      "source",
+      "notes",
+      "sourcedetails",
+    ];
     modal(
-      "Import leads from CSV",
-      `<p>Import leads from any source. Required columns: <strong>name, phone</strong>. Optional: city, source, notes, sourcedetails. All rows use the service and salesperson selected below. Duplicates within a service stop the import so you can correct them.</p><div class="crm-form-grid">${fields(
+      "Import Excel / CSV leads",
+      `<p>Use the first worksheet of an .xlsx file, or a CSV. Up to 500 rows, 1 MB. Map your columns before importing. Names and phone numbers are required; format mobile numbers as text in Excel.</p><div class="crm-form-grid">${fields(
         "Service",
         select(
           "serviceId",
           state.services.filter((s) => s.active),
           "pdc",
-          "required",
         ),
-      )}${fields("Assign salesperson", `<select name="assignedTo"><option value="">Unassigned</option>${options(salespeople(), "")}</select>`)}${fields("Default source", input("source", "Other", "text", 'required maxlength="120"'))}${fields("CSV file", '<input id="leadCSV" type="file" accept=".csv,text/csv" required>')}</div><div id="importPreview" class="crm-help">Choose a CSV file to preview the first 5 rows.</div>`,
+      )}${fields("Assign salesperson", `<select name="assignedTo"><option value="">Use automatic assignment / unassigned</option>${options(salespeople(), "")}</select>`)}${fields("Default source", input("source", "Excel"))}${fields("Excel or CSV file", '<input id="leadCSV" type="file" accept=".xlsx,.csv" required>')}</div><label class="crm-checkbox"><input type="checkbox" name="skipDuplicates" checked>Skip mobile numbers already present for this service</label><div id="importMapping"></div><div id="importPreview">Choose a file.</div>`,
       "Import leads",
       async (b) => {
-        if (!parsed.length) throw new Error("Choose a valid CSV file first.");
-        const leads = parsed.map((r) => ({
-          name: r.name,
-          phone: r.phone,
-          city: r.city || "",
-          notes: r.notes || "",
-          sourceDetails: r.sourcedetails || "",
-          source: r.source || b.source,
-          serviceId: b.serviceId,
-          assignedTo: b.assignedTo,
-        }));
-        const result = await api("/api/leads/import", {
-          method: "POST",
-          body: JSON.stringify({ leads }),
+        if (!grid.length) throw new Error("Choose a valid file.");
+        if (b.map_name === "" || b.map_phone === "")
+          throw new Error("Map name and phone columns.");
+        const leads = grid.map((row) => {
+          const v = Object.fromEntries(
+            columns.map((c) => [
+              c,
+              b["map_" + c] === ""
+                ? ""
+                : String(row[Number(b["map_" + c])] || "").trim(),
+            ]),
+          );
+          return {
+            name: v.name,
+            phone: v.phone,
+            city: v.city,
+            source: v.source || b.source,
+            notes: v.notes,
+            sourceDetails: v.sourcedetails,
+            serviceId: b.serviceId,
+            assignedTo: b.assignedTo,
+          };
         });
-        showToast(`${result.count} leads imported.`);
+        const r = await api("/api/leads/import", {
+          method: "POST",
+          body: JSON.stringify({
+            leads,
+            skipDuplicates: b.skipDuplicates === "on",
+          }),
+        });
+        showToast(`${r.count} imported, ${r.skipped || 0} duplicates skipped.`);
       },
     );
     document.querySelector("#leadCSV").onchange = async (event) => {
-      parsed = [];
-      const preview = document.querySelector("#importPreview");
+      grid = [];
+      headers = [];
+      const preview = document.querySelector("#importPreview"),
+        mapping = document.querySelector("#importMapping");
+      mapping.innerHTML = "";
       try {
         const file = event.target.files[0];
         if (!file) return;
-        if (file.size > 1000000) throw new Error("CSV must be under 1 MB.");
-        parsed = parseCSV(await file.text());
-        preview.innerHTML = `<p>${parsed.length} leads ready to import.</p>${table(
-          ["Name", "Phone", "Source"],
-          parsed
-            .slice(0, 5)
-            .map((r) => [
-              e(r.name),
-              e(r.phone),
-              e(r.source || "Default source"),
-            ]),
+        if (file.size > 1000000) throw new Error("File must be under 1 MB.");
+        if (file.name.toLowerCase().endsWith(".xlsx")) {
+          const buffer = new Uint8Array(await file.arrayBuffer());
+          let binary = "";
+          for (const byte of buffer) binary += String.fromCharCode(byte);
+          const r = await api("/api/operations/excel-preview", {
+            method: "POST",
+            body: JSON.stringify({ file: btoa(binary) }),
+          });
+          headers = r.headers;
+          grid = r.rows;
+        } else {
+          const raw = await file.text();
+          let row = [],
+            value = "",
+            quoted = false,
+            all = [];
+          for (let i = 0; i < raw.length; i++) {
+            const c = raw[i];
+            if (c === '"') {
+              if (quoted && raw[i + 1] === '"') {
+                value += '"';
+                i++;
+              } else quoted = !quoted;
+            } else if (c === "," && !quoted) {
+              row.push(value);
+              value = "";
+            } else if ((c === "\n" || c === "\r") && !quoted) {
+              if (c === "\r" && raw[i + 1] === "\n") i++;
+              row.push(value);
+              if (row.some((x) => x.trim())) all.push(row);
+              row = [];
+              value = "";
+            } else value += c;
+          }
+          if (quoted) throw new Error("CSV has an unclosed quote.");
+          row.push(value);
+          if (row.some((x) => x.trim())) all.push(row);
+          headers = (all.shift() || []).map((x) =>
+            x.replace(/^\uFEFF/, "").trim(),
+          );
+          grid = all;
+          if (grid.some((r) => r.length !== headers.length))
+            throw new Error("CSV rows have inconsistent columns.");
+        }
+        if (!grid.length || grid.length > 500 || headers.length > 40)
+          throw new Error("Use a header and 1–500 rows, up to 40 columns.");
+        const aliases = {
+          name: ["name", "full name", "client name"],
+          phone: ["phone", "mobile", "mobile number", "phone number"],
+          city: ["city"],
+          source: ["source"],
+          notes: ["notes"],
+          sourcedetails: ["sourcedetails", "campaign"],
+        };
+        mapping.innerHTML =
+          '<h4>Map columns</h4><div class="crm-form-grid">' +
+          columns
+            .map((c) => {
+              const i = headers.findIndex((h) =>
+                aliases[c].includes(h.toLowerCase()),
+              );
+              return fields(
+                c,
+                `<select name="map_${c}"><option value="">Not mapped</option>${headers.map((h, j) => `<option value="${j}" ${i === j ? "selected" : ""}>${e(h)}</option>`).join("")}</select>`,
+              );
+            })
+            .join("") +
+          "</div>";
+        preview.innerHTML = `<p>${grid.length} rows found. First 5 shown:</p>${table(
+          headers,
+          grid.slice(0, 5).map((r) => r.map(e)),
         )}`;
-      } catch (error) {
-        preview.textContent = error.message;
+      } catch (err) {
+        grid = [];
+        preview.textContent = err.message;
       }
     };
   }
@@ -1007,7 +1099,7 @@
       if (action === "new-user" || action === "new-salesperson")
         modal(
           action === "new-salesperson" ? "Add salesperson" : "Add team member",
-          `<div class="crm-form-grid">${fields("Name", input("name", "", "text", "required"))}${fields("Email", input("email", "", "email", "required"))}${action === "new-salesperson" ? '<input type="hidden" name="role" value="salesperson">' : fields("Role", select("role", ["salesperson", "nutritionist", "admin"], "salesperson"))}${fields("Initial password", input("password", "", "password", 'required minlength="5" autocomplete="new-password"'))}</div><p>Each salesperson signs in with their own email and password at this dashboard URL. They can access their assigned leads and personal sales reports.</p>${action === "new-user" ? "<p>Nutritionist accounts appear in the client assignment list and can read only their assigned clients.</p>" : ""}`,
+          `<div class="crm-form-grid">${fields("Name", input("name", "", "text", "required"))}${fields("Email", input("email", "", "email", "required"))}${action === "new-salesperson" ? '<input type="hidden" name="role" value="salesperson">' : fields("Role", select("role", ["salesperson", "teamleader", "nutritionist", "admin"], "salesperson"))}${fields("Initial password", input("password", "", "password", 'required minlength="5" autocomplete="new-password"'))}</div><p>Each salesperson signs in with their own email and password at this dashboard URL. They can access their assigned leads and personal sales reports.</p>${action === "new-user" ? "<p>Nutritionist accounts appear in the client assignment list and can read only their assigned clients.</p>" : ""}`,
           "Create account",
           async (b) => {
             await api("/api/users", {
@@ -1185,9 +1277,13 @@
   window.addEventListener("pdc:view", (event) => {
     if (
       currentUser &&
-      ["view-crm", "view-sales-reports", "view-services", "view-team"].includes(
-        event.detail,
-      ) &&
+      [
+        "view-crm",
+        "view-sales-reports",
+        "view-services",
+        "view-team",
+        "view-operations",
+      ].includes(event.detail) &&
       !refreshing
     )
       refresh().catch(toast);

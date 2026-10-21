@@ -1,3 +1,4 @@
+import { createGrowth } from "./growth.js";
 import { createCallFlowApi } from "./callflow-api.js";
 import http from "node:http";
 import { DatabaseSync } from "node:sqlite";
@@ -169,6 +170,11 @@ function prepareLead(u, input, existing = null) {
   )
     fail("Choose an active salesperson.");
   if (
+    u.role === "teamleader" &&
+    (!lead.assignedTo || !growth.memberIds(u).has(lead.assignedTo))
+  )
+    fail("Assign the lead to a member of your team.", 403);
+  if (
     rows("leads").some(
       (l) =>
         l.id !== existing?.id &&
@@ -186,6 +192,7 @@ function createLead(u, input) {
     createdAt: now(),
     updatedAt: now(),
   };
+  growth.assign(value);
   put("leads", value);
   activity(
     u,
@@ -216,7 +223,9 @@ function addUser(input) {
   const name = String(input.name || "").trim();
   if (!/^\S+@\S+\.\S+$/.test(email) || !name || name.length > 120)
     throw new Error("Enter a name and valid email.");
-  if (!["admin", "salesperson", "nutritionist"].includes(input.role))
+  if (
+    !["admin", "salesperson", "nutritionist", "teamleader"].includes(input.role)
+  )
     throw new Error("Choose a valid role.");
   passwordValid(input.password);
   const id = randomUUID();
@@ -249,11 +258,7 @@ function admin(u) {
 function leadAccess(u, id) {
   const lead = record("leads", id);
   if (!lead) fail("Lead not found.", 404);
-  if (
-    u.role === "nutritionist" ||
-    (u.role === "salesperson" && lead.assignedTo !== u.id)
-  )
-    fail("This lead is not assigned to you.", 403);
+  if (!growth.canSee(u, lead)) fail("This lead is not assigned to you.", 403);
   return lead;
 }
 function body(req) {
@@ -304,8 +309,8 @@ function snapshot(u) {
   const leads =
     u.role === "admin"
       ? allLeads
-      : u.role === "salesperson"
-        ? allLeads.filter((l) => l.assignedTo === u.id)
+      : ["salesperson", "teamleader"].includes(u.role)
+        ? allLeads.filter((l) => growth.canSee(u, l))
         : [];
   const ids = new Set(leads.map((l) => l.id));
   const sales =
@@ -318,7 +323,7 @@ function snapshot(u) {
       .prepare("SELECT * FROM users")
       .all()
       .map(publicUser)
-      .filter((x) => u.role === "admin" || x.id === u.id),
+      .filter((x) => u.role === "admin" || growth.memberIds(u).has(x.id)),
     leads,
     calls: rows("calls").filter((c) => ids.has(c.leadId)),
     sales,
@@ -356,6 +361,7 @@ const staticFiles = new Set([
   "crm.js",
   "styles.css",
   "crm.css",
+  "operations.js",
 ]);
 const callflow = createCallFlowApi({
   db,
@@ -367,6 +373,29 @@ const callflow = createCallFlowApi({
   verify,
   body,
   fail,
+});
+const growth = createGrowth({
+  db,
+  rows,
+  record,
+  put,
+  transaction,
+  audit,
+  fail,
+  body,
+  admin,
+  leadAccess,
+  createLead,
+  activity,
+});
+transaction(() => {
+  for (const sale of rows("sales").filter((s) => s.confirmedAt)) {
+    const lead = record("leads", sale.leadId);
+    if (lead && !record("deliveries", sale.id)) {
+      if (sale.commissionRate === undefined) sale.commissionRate = 0;
+      growth.onConvert(lead, sale);
+    }
+  }
 });
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
@@ -382,6 +411,7 @@ const server = http.createServer(async (req, res) => {
   try {
     if (p === "/api/health") return json({ ok: true });
     if (await callflow(req, url, json)) return;
+    if (await growth.intake(req, url, json)) return;
     if (p.startsWith("/api/")) {
       if (
         !["GET", "HEAD"].includes(req.method) &&
@@ -434,6 +464,7 @@ const server = http.createServer(async (req, res) => {
       }
       const u = userFor(req);
       if (!u) fail("Please log in.", 401);
+      if (await growth.route(req, url, u, json)) return;
       if (p === "/api/auth/logout" && req.method === "POST") {
         db.prepare("DELETE FROM sessions WHERE token=?").run(
           hashToken(
@@ -583,21 +614,31 @@ const server = http.createServer(async (req, res) => {
               ? u.id
               : url.searchParams.get("salesperson") || "",
         };
+        const teamIds = growth.memberIds(u);
+        const reportLeads = rows("leads").filter(
+          (l) => u.role !== "teamleader" || teamIds.has(l.assignedTo),
+        );
+        const reportCalls = rows("calls").filter(
+          (c) => u.role !== "teamleader" || teamIds.has(c.actorId),
+        );
+        const reportSales = rows("sales").filter(
+          (s) => u.role !== "teamleader" || teamIds.has(s.salespersonId),
+        );
         if (p === "/api/reports")
           return json(
             salesReport(
-              users,
-              rows("leads"),
-              rows("calls"),
-              rows("sales"),
+              users.filter((x) => u.role !== "teamleader" || teamIds.has(x.id)),
+              reportLeads,
+              reportCalls,
+              reportSales,
               filters,
             ),
           );
         const report = analyticsReport(
-          users,
-          rows("leads"),
-          rows("calls"),
-          rows("sales"),
+          users.filter((x) => u.role !== "teamleader" || teamIds.has(x.id)),
+          reportLeads,
+          reportCalls,
+          reportSales,
           rows("services"),
           filters,
           rows("activities"),
@@ -606,7 +647,7 @@ const server = http.createServer(async (req, res) => {
         if (u.role !== "admin") {
           const assigned = new Set(
             rows("leads")
-              .filter((l) => l.assignedTo === u.id)
+              .filter((l) => growth.canSee(u, l))
               .map((l) => l.id),
           );
           report.effort = report.effort.filter((l) => assigned.has(l.id));
@@ -626,13 +667,28 @@ const server = http.createServer(async (req, res) => {
         const result = transaction(() =>
           b.leads.map((input, index) => {
             try {
+              if (
+                b.skipDuplicates &&
+                rows("leads").some(
+                  (l) =>
+                    phoneKey(l.phone) === phoneKey(input.phone) &&
+                    l.serviceId === serviceFor(input).id,
+                )
+              )
+                return null;
               return createLead(u, input);
             } catch (error) {
               fail(`Row ${index + 1}: ${error.message}`, error.status || 400);
             }
           }),
         );
-        return json({ count: result.length }, 201);
+        return json(
+          {
+            count: result.filter(Boolean).length,
+            skipped: result.filter((x) => !x).length,
+          },
+          201,
+        );
       }
       if (p === "/api/leads" && req.method === "POST") {
         if (u.role === "nutritionist") fail("Sales access required.", 403);
@@ -988,7 +1044,26 @@ const server = http.createServer(async (req, res) => {
       }
       if (p === "/api/backup" && req.method === "GET") {
         admin(u);
-        return json({ ...snapshot(u), version: 2, exportedAt: now() });
+        return json({
+          ...snapshot(u),
+          operations: Object.fromEntries(
+            [
+              "profiles",
+              "settings",
+              "targets",
+              "deliveries",
+              "renewals",
+              "commissionRules",
+              "commissionPayments",
+              "messageTemplates",
+              "messages",
+              "intakeEvents",
+              "assignment",
+            ].map((k) => [k, rows(k)]),
+          ),
+          version: 3,
+          exportedAt: now(),
+        });
       }
       fail("Endpoint not found.", 404);
     }
@@ -1028,6 +1103,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 function convert(lead, sale) {
+  growth.onConvert(lead, sale);
   put("leads", {
     ...lead,
     stage: "Purchased",

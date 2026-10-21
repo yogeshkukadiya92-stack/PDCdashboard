@@ -1,7 +1,9 @@
 FROM node:24-alpine
 WORKDIR /app
-COPY package.json server.js crm-domain.js callflow-api.js ./
-COPY index.html app.js crm.js styles.css crm.css seed-data.js ./
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+COPY server.js crm-domain.js callflow-api.js growth.js ./
+COPY index.html app.js crm.js operations.js styles.css crm.css seed-data.js ./
 COPY assets ./assets
 RUN mkdir -p /app/data && chown -R node:node /app
 USER node

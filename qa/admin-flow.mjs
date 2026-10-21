@@ -153,7 +153,7 @@ await page
       'name,phone,source,notes\n"QA Import, Lead",9998887775,Referral,"Asked for details"\n',
     ),
   });
-await page.getByText("1 leads ready to import.").waitFor();
+await page.getByText("1 rows found. First 5 shown:").waitFor();
 await page
   .locator("#crmDialog")
   .getByRole("button", { name: "Import leads", exact: true })

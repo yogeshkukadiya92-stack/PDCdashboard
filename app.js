@@ -1746,8 +1746,10 @@ function switchView(viewId) {
   const previousView = document.querySelector(".page-section.active")?.id;
   let resolvedViewId = viewAliases[viewId] || viewId;
   if (
-    currentUser?.role === "salesperson" &&
-    !["view-crm", "view-sales-reports"].includes(resolvedViewId)
+    ["salesperson", "teamleader"].includes(currentUser?.role) &&
+    !["view-crm", "view-sales-reports", "view-operations"].includes(
+      resolvedViewId,
+    )
   )
     resolvedViewId = "view-crm";
   if (
