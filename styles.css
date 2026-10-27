@@ -281,6 +281,7 @@ label.file-button {
 
 .sidebar {
   position: fixed;
+  overflow-y: auto;
   inset: 0 auto 0 0;
   width: var(--sidebar);
   background: linear-gradient(180deg, #0f1d19, #142821);
@@ -626,7 +627,23 @@ button svg,
 
 .nutritionist-client-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
+}
+
+.nutritionist-client-card > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.nutritionist-client-card .row-actions {
+  flex-wrap: wrap;
+}
+
+.nutritionist-date-heading {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 14px;
 }
 
 .nutritionist-client-card {
@@ -657,11 +674,13 @@ button svg,
 
 .clients-layout {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   margin-bottom: 16px;
 }
 
 .panel {
+  min-width: 0;
   padding: 20px;
 }
 
@@ -1196,7 +1215,7 @@ tbody tr:hover {
   .payment-grid,
   .history-grid,
   .sync-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     display: grid;
   }
 
@@ -1302,6 +1321,20 @@ tbody tr:hover {
   .login-card {
     width: min(330px, calc(100vw - 48px));
     padding: 40px 28px;
+  }
+}
+
+@media (max-width: 560px) {
+  .panel {
+    overflow-wrap: anywhere;
+  }
+
+  .panel .primary-button,
+  .panel .ghost-button {
+    max-width: 100%;
+    white-space: normal;
+    padding-top: 8px;
+    padding-bottom: 8px;
   }
 }
 

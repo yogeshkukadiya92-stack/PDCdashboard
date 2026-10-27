@@ -5,6 +5,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      PDC_BROWSER_CHANNEL: chrome
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -13,7 +15,7 @@ jobs:
       - run: node --check app.js && node --check crm.js && node --check server.js && node --check growth.js && node --check operations.js
       - run: npm ci
       - run: npm test
-      - run: npx playwright install --with-deps chromium
+      - run: google-chrome --version
       - run: npm run test:browser
       - uses: actions/upload-artifact@v4
         if: always()
