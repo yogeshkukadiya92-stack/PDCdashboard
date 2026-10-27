@@ -627,7 +627,17 @@ button svg,
 
 .nutritionist-client-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
+}
+
+.nutritionist-client-card > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.nutritionist-client-card .row-actions {
+  flex-wrap: wrap;
 }
 
 .nutritionist-date-heading {
@@ -1311,6 +1321,20 @@ tbody tr:hover {
   .login-card {
     width: min(330px, calc(100vw - 48px));
     padding: 40px 28px;
+  }
+}
+
+@media (max-width: 560px) {
+  .panel {
+    overflow-wrap: anywhere;
+  }
+
+  .panel .primary-button,
+  .panel .ghost-button {
+    max-width: 100%;
+    white-space: normal;
+    padding-top: 8px;
+    padding-bottom: 8px;
   }
 }
 
