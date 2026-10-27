@@ -123,6 +123,7 @@ const elements = {
   notes: document.querySelector("#notes"),
   clientTable: document.querySelector("#clientTable"),
   reminderList: document.querySelector("#reminderList"),
+  clientBucketList: document.querySelector("#clientBucketList"),
   searchInput: document.querySelector("#searchInput"),
   statusFilter: document.querySelector("#statusFilter"),
   detailClientSelect: document.querySelector("#detailClientSelect"),
@@ -242,19 +243,23 @@ function legacyClientBackup() {
   }
 }
 function mergeClientLists(existingClients, incomingClients) {
-  const byIdentity = new Map();
+  const byIdentity = new Map(existingClients.map(client => [client.id, client]));
   const identityFor = (client) => {
     const phone = String(client.phone || "").replace(/\D/g, "");
     return (
-      phone ||
-      `${String(client.name || "")
+      `${phone}|${String(client.name || "")
         .trim()
         .toLowerCase()}|${String(client.startDate || "").trim()}`
     );
   };
 
-  [...existingClients, ...incomingClients].forEach((client) => {
-    byIdentity.set(identityFor(client), client);
+  incomingClients.forEach((client) => {
+    const existing = client.id
+      ? byIdentity.get(client.id)
+      : existingClients.find(item => identityFor(item) === identityFor(client));
+    const merged = normalizeClient({ ...client, id: existing?.id || client.id,
+      revision: existing?.revision || 0 });
+    byIdentity.set(merged.id, merged);
   });
 
   return Array.from(byIdentity.values());
@@ -509,6 +514,7 @@ function render() {
   renderMetrics();
   renderNutritionistOverview();
   renderClients();
+  renderReminders();
   renderClientBuckets();
   renderDetails();
   renderPayments();
@@ -535,14 +541,21 @@ function clientsForNutritionist(nutritionist = selectedOverviewNutritionist()) {
       (client) => normalizeNutritionist(client.nutritionist) === nutritionist,
     )
     .sort((a, b) => {
-      const statusOrder = lifecycleFor(a).localeCompare(lifecycleFor(b));
-      if (statusOrder !== 0) return statusOrder;
+      const dateOrder = nutritionistOverviewDate(a).localeCompare(
+        nutritionistOverviewDate(b),
+      );
+      if (dateOrder !== 0) return dateOrder;
       return String(a.name).localeCompare(String(b.name));
     });
 }
 
 function meetingsThisMonthFor(client) {
-  return (client.meetings || []).filter(isMeetingInCurrentMonth);
+  return (client.meetings || []).filter(isMeetingInCurrentMonth)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function nutritionistOverviewDate(client) {
+  return meetingsThisMonthFor(client)[0]?.date || nextMeetingFor(client)?.date || "9999-12-31";
 }
 
 function renderNutritionistOverview() {
@@ -562,14 +575,20 @@ function renderNutritionistOverview() {
   elements.nutritionistTotalClients.textContent = selectedClients.length;
   elements.nutritionistActiveClients.textContent = activeClients.length;
   elements.nutritionistOldClients.textContent = oldClients.length;
-  elements.nutritionistMonthMeetings.textContent = meetingClients.length;
+  elements.nutritionistMonthMeetings.textContent = selectedClients.reduce(
+    (total, client) => total + meetingsThisMonthFor(client).length, 0,
+  );
   elements.nutritionistClientTitle.textContent = `${nutritionist} Clients`;
   elements.shareNutritionistMeetingsButton.disabled =
     meetingClients.length === 0;
 
   elements.nutritionistClientList.innerHTML =
     selectedClients
-      .map((client) => {
+      .map((client, index) => {
+        const date = nutritionistOverviewDate(client);
+        const dateHeading = index === 0 || date !== nutritionistOverviewDate(selectedClients[index - 1])
+          ? `<h4 class="nutritionist-date-heading">${date === "9999-12-31" ? "No meeting scheduled" : escapeHtml(formatDate(date))}</h4>`
+          : "";
         const monthMeetings = meetingsThisMonthFor(client);
         const next = nextMeetingFor(client);
         const meetingText = monthMeetings.length
@@ -578,6 +597,7 @@ function renderNutritionistOverview() {
             ? `Next: ${formatDate(next.date)}`
             : "No meeting scheduled";
         return `
+          ${dateHeading}
           <article class="nutritionist-client-card">
             <div>
               <strong>${escapeHtml(client.name)}</strong>
@@ -676,29 +696,25 @@ function renderMetrics() {
       }).length
     );
   }, 0);
-  const pendingAmount = activeClients.reduce(
+  const pendingAmount = clients.reduce(
     (sum, client) => sum + pendingFor(client),
     0,
   );
-  const dueSoon = activeClients.filter((client) => {
+  const dueSoon = clients.filter((client) => {
     const next = nextMeetingFor(client);
-    const meetingDays = next ? dateDiffInDays(next.date) : 999;
+    const meetingDays = next?.status === "Pending" ? dateDiffInDays(next.date) : 999;
     const renewalDays = renewalDaysFor(client);
-    return (
+    const followUpDays = client.followUpDate ? dateDiffInDays(client.followUpDate) : 999;
+    return (client.status === "Active" && lifecycleFor(client) === "active" && (
       (meetingDays >= 0 && meetingDays <= 7) ||
-      (renewalDays >= 0 && renewalDays <= renewalReminderWindowDays)
-    );
-  }).length;
-  const followUpsDue = clients.filter((client) => {
-    if (client.status !== "Interested" || !client.followUpDate) return false;
-    const days = dateDiffInDays(client.followUpDate);
-    return days <= 7;
+      (renewalDays >= 0 && renewalDays <= 7)
+    )) || (client.status === "Interested" && followUpDays >= 0 && followUpDays <= 7);
   }).length;
 
   elements.totalClients.textContent = activeClients.length;
   elements.monthMeetings.textContent = monthMeetings;
   elements.pendingAmount.textContent = formatCurrency(pendingAmount);
-  elements.dueSoonCount.textContent = dueSoon + followUpsDue;
+  elements.dueSoonCount.textContent = dueSoon;
 }
 
 function renderClients() {
@@ -756,7 +772,7 @@ function renderReminders() {
   const meetingItems = clients
     .filter((client) => client.status === "Active")
     .map((client) => ({ client, meeting: nextMeetingFor(client) }))
-    .filter((item) => item.meeting && dateDiffInDays(item.meeting.date) <= 7)
+    .filter((item) => item.meeting?.status === "Pending" && dateDiffInDays(item.meeting.date) <= 7)
     .map((item) => ({
       type: "meeting",
       ...item,
@@ -879,7 +895,7 @@ function renderClientBuckets() {
     `;
   };
 
-  elements.reminderList.innerHTML = `
+  elements.clientBucketList.innerHTML = `
     <div class="client-buckets">
       <section class="client-bucket">
         <div class="bucket-heading">
@@ -1035,6 +1051,7 @@ function renderPayments() {
 function resetForm({ clearProof = true } = {}) {
   elements.clientForm.reset();
   elements.clientId.value = "";
+  elements.phone.required = true;
   elements.planMonths.value = 3;
   elements.serviceAmount.value = 0;
   elements.receivedAmount.value = 0;
@@ -1051,6 +1068,20 @@ function resetForm({ clearProof = true } = {}) {
 }
 
 async function handleSubmit(event) {
+  event?.preventDefault();
+  if (handleSubmit.saving) return;
+  handleSubmit.saving = true;
+  const button = document.querySelector("#saveClientButton");
+  button.disabled = true;
+  try {
+    await saveClientForm(event);
+  } finally {
+    handleSubmit.saving = false;
+    button.disabled = false;
+  }
+}
+
+async function saveClientForm(event) {
   event?.preventDefault();
   if (!document.querySelector("#clientForm").reportValidity()) return;
   const baseClient = {
@@ -1071,7 +1102,8 @@ async function handleSubmit(event) {
     createdAt: new Date().toISOString(),
   };
 
-  if (!baseClient.name || !baseClient.phone) {
+  const existingClient = clients.find(item => item.id === baseClient.id);
+  if (!baseClient.name || (!baseClient.phone && !existingClient)) {
     showToast("Client name and mobile number are required.");
     setFormStatus("Save blocked: client name and mobile number are required.");
     clearSaveProof();
@@ -1174,6 +1206,7 @@ function editClient(id) {
   elements.clientId.value = client.id;
   elements.clientName.value = client.name;
   elements.phone.value = client.phone;
+  elements.phone.required = false;
   elements.planMonths.value = client.planMonths;
   elements.serviceAmount.value = client.serviceAmount;
   elements.receivedAmount.value = receivedFor(client);
@@ -1202,6 +1235,7 @@ async function deleteClient(id) {
   clients = clients.filter((item) => item.id !== id);
   if (!(await saveClients())) return;
   syncClientToSheet(client, "client_deleted");
+  if (elements.clientId.value === id) resetForm();
   render();
   showToast("Client deleted.");
 }
@@ -1377,13 +1411,17 @@ function followUpMessage(client) {
 }
 
 async function sendWhatsApp(client, message) {
+  const digits = String(client.phone || "").replace(/\D/g, "");
+  if (!digits) {
+    showToast("Add a mobile number to this client before opening WhatsApp.");
+    return;
+  }
   try {
     await navigator.clipboard.writeText(message);
     showToast("Message copied. Opening WhatsApp.");
   } catch {
     showToast("Message ready. Opening WhatsApp.");
   }
-  const digits = client.phone.replace(/\D/g, "");
   const phone = digits.length === 10 ? `91${digits}` : digits;
   window.open(
     `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
@@ -1600,7 +1638,7 @@ async function loadSheetClients({ silent = false } = {}) {
       return false;
     }
 
-    clients = remoteClients.map(normalizeClient);
+    clients = mergeClientLists(clients, remoteClients);
     const keepSelected = clients.some(
       (client) => client.id === selectedClientId,
     );
@@ -1629,10 +1667,15 @@ async function syncAllToSheet() {
     showToast("Please save the Google Apps Script Web App URL first.");
     return;
   }
+  let failed = 0;
   for (const client of clients) {
-    await syncClientToSheet(client, "manual_sync");
+    if (!(await syncClientToSheet(client, "manual_sync"))) failed++;
   }
-  showToast("All clients sent to Google Sheet.");
+  if (failed) {
+    elements.syncStatus.textContent = "Sync failed";
+    elements.syncStatus.className = "badge danger";
+  }
+  showToast(failed ? `${failed} clients could not be sent. Please retry Sync All.` : "All clients sent to Google Sheet.");
 }
 
 function exportData() {
@@ -1683,6 +1726,7 @@ async function enableNotifications() {
     (client) =>
       client.status === "Active" &&
       nextMeetingFor(client) &&
+      nextMeetingFor(client).status === "Pending" &&
       dateDiffInDays(nextMeetingFor(client).date) <= 1,
   );
   const urgentRenewals = clients.filter(

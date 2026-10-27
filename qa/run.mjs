@@ -1,10 +1,13 @@
 import { spawn } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import { chromium } from "playwright";
 import { tmpdir } from "node:os";
 import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 const data = mkdtempSync(path.join(tmpdir(), "pdc-browser-"));
 const output = path.join(root, "qa", "artifacts");
+const browserChannel = process.env.PDC_BROWSER_CHANNEL ||
+  (!existsSync(chromium.executablePath()) && existsSync("/Applications/Google Chrome.app") ? "chrome" : "");
 mkdirSync(output, { recursive: true });
 const server = spawn(process.execPath, ["server.js"], {
   cwd: root,
@@ -30,12 +33,15 @@ try {
     "roles-flow.mjs",
     "admin-controls.mjs",
     "operations-flow.mjs",
+    "dashboard-edge-cases.mjs",
+    "dashboard-audit.mjs",
   ])
     await new Promise((resolve, reject) => {
       const child = spawn(process.execPath, [path.join(root, "qa", script)], {
         cwd: root,
         env: {
           ...process.env,
+          PDC_BROWSER_CHANNEL: browserChannel,
           QA_BASE_URL: `http://127.0.0.1:${port}`,
           QA_OUTPUT_DIR: output,
         },

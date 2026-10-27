@@ -281,6 +281,7 @@ label.file-button {
 
 .sidebar {
   position: fixed;
+  overflow-y: auto;
   inset: 0 auto 0 0;
   width: var(--sidebar);
   background: linear-gradient(180deg, #0f1d19, #142821);
@@ -629,6 +630,12 @@ button svg,
   gap: 10px;
 }
 
+.nutritionist-date-heading {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
 .nutritionist-client-card {
   display: flex;
   align-items: center;
@@ -657,11 +664,13 @@ button svg,
 
 .clients-layout {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   margin-bottom: 16px;
 }
 
 .panel {
+  min-width: 0;
   padding: 20px;
 }
 
@@ -1196,7 +1205,7 @@ tbody tr:hover {
   .payment-grid,
   .history-grid,
   .sync-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     display: grid;
   }
 
