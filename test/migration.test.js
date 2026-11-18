@@ -82,7 +82,10 @@ test("legacy leads, calls and purchases migrate without losing records or duplic
           headers: { Cookie: login.headers.get("set-cookie").split(";")[0] },
         })
       ).json();
-      assert.equal(state.services.length, 2);
+      assert.equal(state.services.length, 21);
+      assert.equal(state.services[0].name, "WEIGHT LOSS AND THYROID");
+      assert.equal(state.services[17].name, "Diet Counseling");
+      assert.equal(state.services[18].name, "Therapy Session");
       assert.equal(state.leads.length, 1);
       assert.equal(state.calls.length, 1);
       assert.equal(state.sales.length, 1);

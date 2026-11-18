@@ -161,6 +161,10 @@
       state = await api("/api/state");
       currentUser = state.user;
       clients = state.clients.map(normalizeClient);
+      document.querySelector("#clientServiceSuggestions").innerHTML = state.services
+        .filter((s) => s.active)
+        .map((s) => `<option value="${e(s.name)}"></option>`)
+        .join("");
       clientServerSnapshot = structuredClone(clients);
       for (const id of ["nutritionist", "overviewNutritionist"]) {
         const control = document.getElementById(id);

@@ -109,6 +109,7 @@ const elements = {
   clientForm: document.querySelector("#clientForm"),
   clientId: document.querySelector("#clientId"),
   clientName: document.querySelector("#clientName"),
+  clientServiceName: document.querySelector("#clientServiceName"),
   phone: document.querySelector("#phone"),
   planMonths: document.querySelector("#planMonths"),
   serviceAmount: document.querySelector("#serviceAmount"),
@@ -737,6 +738,7 @@ function renderClients() {
               <div>
                 <strong>${escapeHtml(client.name)}</strong>
                 <p>${escapeHtml(client.phone)}</p>
+                ${client.serviceName ? `<p>${escapeHtml(client.serviceName)}</p>` : ""}
               </div>
             </div>
           </td>
@@ -1087,6 +1089,7 @@ async function saveClientForm(event) {
   const baseClient = {
     id: elements.clientId.value || createId(),
     name: elements.clientName.value.trim(),
+    serviceName: elements.clientServiceName.value.trim(),
     phone: elements.phone.value.trim(),
     planMonths: Number(elements.planMonths.value || 1),
     serviceAmount: Number(elements.serviceAmount.value || 0),
@@ -1205,6 +1208,7 @@ function editClient(id) {
   if (!client) return;
   elements.clientId.value = client.id;
   elements.clientName.value = client.name;
+  elements.clientServiceName.value = client.serviceName || "";
   elements.phone.value = client.phone;
   elements.phone.required = false;
   elements.planMonths.value = client.planMonths;

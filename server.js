@@ -1,4 +1,5 @@
 import { createCalendar } from "./calendar.js";
+import { referenceServices, orderServices } from "./service-catalog.js";
 import { createGrowth } from "./growth.js";
 import { createCallFlowApi } from "./callflow-api.js";
 import http from "node:http";
@@ -77,6 +78,24 @@ function transaction(fn) {
 }
 // Idempotent migration: keep existing counselling purchases and their reporting attribution.
 transaction(() => {
+  if (!record("migrations", "reference-services-2026-11")) {
+    for (const [index, name] of referenceServices.entries()) {
+      if (rows("services").some((s) => s.name.toLowerCase() === name.toLowerCase())) continue;
+      put("services", {
+        id: `reference-service-${index + 1}`,
+        name,
+        kind: "general",
+        price: 0,
+        months: 1,
+        deliveryOwner: "",
+        description: "",
+        active: true,
+        createdAt: now(),
+        updatedAt: now(),
+      });
+    }
+    put("migrations", { id: "reference-services-2026-11", completedAt: now() });
+  }
   if (!record("services", "pdc"))
     put("services", {
       id: "pdc",
@@ -328,7 +347,7 @@ function snapshot(u) {
     leads,
     calls: rows("calls").filter((c) => ids.has(c.leadId)),
     sales,
-    services: u.role === "nutritionist" ? [] : rows("services"),
+    services: u.role === "nutritionist" ? [] : orderServices(rows("services")),
     nutritionists: [
       ...new Set([
         "Dr Luv Patel",
@@ -959,6 +978,8 @@ const server = http.createServer(async (req, res) => {
               (c.phone != null && typeof c.phone !== "string")
             )
               fail("Invalid client.");
+            if (c.serviceName != null && (typeof c.serviceName !== "string" || c.serviceName.length > 120))
+              fail("Enter a service or disease name up to 120 characters.");
             if (c.startDate !== undefined && !validDate(c.startDate))
               fail("Enter a valid client start date.");
             if (
